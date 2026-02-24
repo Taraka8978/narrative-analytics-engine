@@ -4,4 +4,6 @@ transformers
 torch
 pandas
 numpy
-scikit-learnrequests
+scikit-learn
+gunicorn
+requests
