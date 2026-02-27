@@ -5,10 +5,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.model_selection import train_test_split
 
 from utils import clean_text
 
@@ -126,6 +122,11 @@ def diagnostic_analytics(df: pd.DataFrame, model) -> Dict[str, Any]:
 
 
 def predictive_analytics(df: pd.DataFrame, model) -> Dict[str, Any]:
+
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+    from sklearn.model_selection import train_test_split
     text_column = _find_text_column(df)
     if not text_column:
         return {
