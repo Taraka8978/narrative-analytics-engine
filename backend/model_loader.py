@@ -36,6 +36,14 @@ class FallbackLexiconSentiment:
 
 @lru_cache(maxsize=1)
 def get_sentiment_model():
+    disable_hf = os.getenv("DISABLE_HF", "false").lower() == "true"
+    if os.getenv("RENDER") == "true":
+        disable_hf = True
+
+    if disable_hf:
+        print("INFO: Bypassing Hugging Face pipeline to prevent memory OOM. Using lexicon classifier.", file=sys.stderr, flush=True)
+        return FallbackLexiconSentiment()
+
     try:
         from transformers import pipeline
         return pipeline("sentiment-analysis", model=MODEL_NAME)
