@@ -164,12 +164,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
   return (
     <div className="space-y-12 animate-in fade-in duration-700 bg-slate-50 -mx-6 px-6 py-12">
       {/* BI Command Center Header */}
-      <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mx-2">
         <div className="flex items-center gap-4">
           <LayoutIcon className="w-5 h-5 text-slate-400" />
-          <h2 className="text-lg font-bold text-slate-800 tracking-tight uppercase">Executive BI Canvas</h2>
+          <h2 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight uppercase">Executive BI Canvas</h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end w-full sm:w-auto">
           <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><Filter className="w-4 h-4" /></button>
           <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><Share2 className="w-4 h-4" /></button>
           <button 
@@ -177,9 +177,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-xs font-bold transition-all"
             title="Export the cleaned dataset used for these insights"
           >
-            <Download className="w-4 h-4" /> EXPORT CLEAN DATA
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">EXPORT CLEAN DATA</span>
           </button>
-          <button onClick={onReset} className="ml-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all">NEW ANALYSIS</button>
+          <button onClick={onReset} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all">NEW ANALYSIS</button>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
 
       {/* Visual Canvas Tier */}
       {selectedElement && (
-        <div className="bg-white p-6 rounded-3xl border border-indigo-100 shadow-lg animate-in slide-in-from-top-4 duration-500 max-w-5xl mx-auto flex items-center justify-between gap-6">
+        <div className="bg-white p-6 rounded-[24px] border border-indigo-100 shadow-lg animate-in slide-in-from-top-4 duration-500 max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
               <BarChart2 className="w-6 h-6 animate-pulse" />
