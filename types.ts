@@ -4,6 +4,12 @@ export interface DataRow {
 }
 
 export interface AnalysisSummary {
+  metadata?: {
+    metric_name: string;
+    dimension_name: string;
+    sec_dimension_name?: string;
+    dataset_type: 'text_feedback' | 'structured_tabular';
+  };
   biOverview: {
     composition: Array<{ label: string; value: number }>;
     trend: Array<{ name: string; value: number }>;
@@ -26,7 +32,7 @@ export interface AnalysisSummary {
   };
   prescriptive: {
     narrative: string;
-    recommendations: Array<{ action: string; impact: string; priority: 'High' | 'Medium' | 'Low' }>;
+    recommendations: Array<{ action: string; impact: string; priority: 'High' | 'Medium' | 'Low'; plan?: string[] }>;
     disclaimer: string;
   };
 }

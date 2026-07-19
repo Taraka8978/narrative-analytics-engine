@@ -27,13 +27,38 @@ const App: React.FC = () => {
         const rows = text.split('\n').filter(r => r.trim());
         if (rows.length < 2) throw new Error("File is empty or missing headers.");
         
-        const headers = rows[0].split(',').map(h => h.trim());
+        // Helper to parse a single CSV line respecting double quotes
+        const parseCSVLine = (line: string): string[] => {
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          const cleanLine = line.replace(/\r$/, '');
+          for (let i = 0; i < cleanLine.length; i++) {
+            const char = cleanLine[i];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              result.push(current);
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current);
+          return result;
+        };
+
+        const headers = parseCSVLine(rows[0]).map(h => h.trim());
         const parsedData = rows.slice(1).map(row => {
-          const values = row.split(',');
+          const values = parseCSVLine(row);
           const obj: any = {};
           headers.forEach((header, i) => {
-            const val = values[i]?.trim();
-            obj[header] = (val && !isNaN(Number(val))) ? Number(val) : val;
+            let val = values[i]?.trim() ?? '';
+            // Remove surrounding double quotes if present
+            if (val.startsWith('"') && val.endsWith('"')) {
+              val = val.substring(1, val.length - 1);
+            }
+            obj[header] = (val !== '' && !isNaN(Number(val))) ? Number(val) : val;
           });
           return obj;
         });
