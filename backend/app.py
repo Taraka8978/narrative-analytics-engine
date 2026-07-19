@@ -17,6 +17,16 @@ CORS(
     methods=["GET", "POST", "OPTIONS"]
 )
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    tb = traceback.format_exc()
+    print(f"UNHANDLED EXCEPTION: {str(e)}\n{tb}", flush=True)
+    return jsonify({
+        "error": str(e),
+        "traceback": tb
+    }), 500
+
 # Lazy load sentiment model to avoid startup crashes
 SENTIMENT_MODEL = None
 
