@@ -162,7 +162,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700 bg-slate-50 -mx-6 px-6 py-12">
+    <div className="space-y-12 animate-in fade-in duration-700 bg-slate-50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-6 sm:py-12">
       {/* BI Command Center Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mx-2">
         <div className="flex items-center gap-4">
@@ -249,7 +249,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
 
           return (
             <>
-              <div className="lg:col-span-8 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm relative group">
+              <div className="lg:col-span-8 bg-white p-4 sm:p-8 rounded-[32px] border border-slate-200 shadow-sm relative group mx-2">
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
@@ -311,7 +311,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                 </div>
               </div>
 
-              <div className="lg:col-span-4 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm flex flex-col">
+              <div className="lg:col-span-4 bg-white p-4 sm:p-8 rounded-[32px] border border-slate-200 shadow-sm flex flex-col mx-2">
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
@@ -364,7 +364,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                 </div>
               </div>
 
-              <div className="lg:col-span-12 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
+              <div className="lg:col-span-12 bg-white p-4 sm:p-8 rounded-[32px] border border-slate-200 shadow-sm mx-2">
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest">
