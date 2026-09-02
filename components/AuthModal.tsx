@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { UserProfile } from '../types';
 import { Logo } from './Logo';
 import { ArrowRight, Lock, Sparkles, CheckCircle2, User, Building, Mail, Key, X } from 'lucide-react';
@@ -44,6 +45,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [company, setCompany] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Lock body scroll and prevent background jumping when modal is active
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -138,28 +150,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-nomu-fade">
-      <div className="bg-white w-full max-w-md rounded-[36px] border border-black/[0.08] shadow-[0_24px_60px_-15px_rgba(0,0,0,0.2)] p-6 sm:p-10 relative overflow-hidden">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-md z-[99999] flex items-center justify-center p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="bg-white w-full max-w-md rounded-[36px] border border-black/[0.08] shadow-[0_24px_60px_-15px_rgba(0,0,0,0.25)] p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-[#FAF4ED] hover:bg-black hover:text-white text-[#0E0E10] flex items-center justify-center transition-colors cursor-pointer z-10"
+          className="absolute top-5 right-5 w-9 h-9 rounded-full bg-[#FAF4ED] hover:bg-black hover:text-white text-[#0E0E10] flex items-center justify-center transition-colors cursor-pointer z-10"
         >
           <X className="w-4 h-4" />
         </button>
 
         {/* Header with Logo */}
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <Logo size="sm" showWordmark={true} />
           <div>
-            <h3 className="text-2xl font-black text-[#0E0E10] tracking-tight">
+            <h3 className="text-xl sm:text-2xl font-black text-[#0E0E10] tracking-tight">
               {isRegistering ? 'Register Client Workspace' : 'Client & Partner Sign In'}
             </h3>
             <p className="text-xs text-[#71717A] mt-1">
               {isRegistering 
-                ? 'Create credentials to persist your analysis history and custom exports.' 
-                : 'Sign in to access your organization’s analytical audit logs.'}
+                ? 'Create credentials to access the data engine and persist your analysis history.' 
+                : 'Sign in to access your organization’s analytical workspace.'}
             </p>
           </div>
         </div>
@@ -178,7 +198,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Form */}
-        <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-3.5 mt-5">
+        <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-3 mt-4">
           {isRegistering && (
             <>
               <div>
@@ -241,14 +261,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           <button
             type="submit"
-            className="nomu-pill w-full mt-2 py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="nomu-pill w-full mt-2 py-3 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
             {isRegistering ? 'Complete Registration' : 'Sign In to Workspace'}
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </form>
 
-        <div className="mt-5 pt-4 border-t border-black/[0.06] text-center">
+        <div className="mt-4 pt-3 border-t border-black/[0.06] text-center">
           <button
             type="button"
             onClick={() => {
@@ -264,9 +284,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* Tactile Demo Chips */}
+        {/* 1-Click Demo Profiles */}
         {!isRegistering && (
-          <div className="mt-5 pt-4 border-t border-black/[0.06] space-y-2">
+          <div className="mt-4 pt-3 border-t border-black/[0.06] space-y-2">
             <p className="text-[10px] font-bold text-[#71717A] uppercase tracking-wider text-center">
               1-Click Demo Profiles:
             </p>
@@ -294,4 +314,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
