@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Cell, AreaChart, Area, PieChart, Pie, LabelList
@@ -9,7 +10,8 @@ import {
   ShieldCheck, AlertCircle, ArrowUpRight, ArrowDownRight,
   Layout as LayoutIcon, Maximize2, Download,
   FileText, SlidersHorizontal, Search, RotateCcw, Loader2, Check,
-  Copy, Zap, Table as TableIcon, HelpCircle, CheckCircle2
+  Copy, Zap, Table as TableIcon, HelpCircle, CheckCircle2,
+  Layers, Compass, ChevronRight
 } from 'lucide-react';
 import { exportDashboardToPDF } from '../services/pdfExportService';
 import { Logo } from './Logo';
@@ -23,7 +25,19 @@ interface DashboardProps {
 // Nomu-inspired warm editorial palette
 const COLORS = ['#FF7448', '#0E0E10', '#10B981', '#F59E0B', '#6366F1', '#EC4899'];
 
+const DASHBOARD_TABS = [
+  { id: 'overview', label: 'Overview & Visuals', icon: LayoutIcon, tag: 'Visuals' },
+  { id: 'descriptive', label: '1. Descriptive', icon: BarChart2, tag: 'Patterns' },
+  { id: 'diagnostic', label: '2. Diagnostic', icon: Activity, tag: 'Root Causes' },
+  { id: 'predictive', label: '3. Predictive', icon: TrendingUp, tag: 'Forecast' },
+  { id: 'prescriptive', label: '4. Action Plan', icon: Lightbulb, tag: 'Decisions' },
+  { id: 'all', label: 'Complete Deck', icon: FileText, tag: 'Full Report' },
+] as const;
+
+type TabId = typeof DASHBOARD_TABS[number]['id'];
+
 export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data }) => {
+  const [activeTab, setActiveTab] = React.useState<TabId>('overview');
   const [activePlan, setActivePlan] = React.useState<{ action: string; plan?: string[] } | null>(null);
   const [selectedElement, setSelectedElement] = React.useState<{
     chartName: string;
@@ -36,6 +50,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
   const [searchKeyword, setSearchKeyword] = React.useState<string>('');
   const [isExportingPDF, setIsExportingPDF] = React.useState<boolean>(false);
   const [copiedBriefing, setCopiedBriefing] = React.useState<boolean>(false);
+
+  // Lock background scroll when Action Steps modal is active
+  React.useEffect(() => {
+    if (activePlan) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [activePlan]);
 
   // Chart Matrix Toggles (Visual Chart vs Data Table)
   const [trendViewMode, setTrendViewMode] = React.useState<'chart' | 'table'>('chart');
@@ -178,16 +203,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
 
   const handleExportPDF = async () => {
     setIsExportingPDF(true);
-    try {
-      await exportDashboardToPDF('executive-dashboard-canvas', {
-        title: 'NARRATIVE ANALYTICS ENGINE — EXECUTIVE REPORT',
-        company: 'Executive BI Platform'
-      });
-    } catch (err) {
-      console.error('Failed to export PDF:', err);
-    } finally {
-      setIsExportingPDF(false);
-    }
+    const prevTab = activeTab;
+    setActiveTab('all');
+
+    setTimeout(async () => {
+      try {
+        await exportDashboardToPDF('executive-dashboard-canvas', {
+          title: 'NARRATIVE ANALYTICS ENGINE — EXECUTIVE REPORT',
+          company: 'Executive BI Platform'
+        });
+      } catch (err) {
+        console.error('Failed to export PDF:', err);
+      } finally {
+        setIsExportingPDF(false);
+        setActiveTab(prevTab);
+      }
+    }, 250);
   };
 
   const handleCopyBriefing = () => {
@@ -358,15 +389,21 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
     );
   };
 
+  const showOverview = activeTab === 'overview' || activeTab === 'all';
+  const showDescriptive = activeTab === 'descriptive' || activeTab === 'all';
+  const showDiagnostic = activeTab === 'diagnostic' || activeTab === 'all';
+  const showPredictive = activeTab === 'predictive' || activeTab === 'all';
+  const showPrescriptive = activeTab === 'prescriptive' || activeTab === 'all';
+
   return (
-    <div id="executive-dashboard-canvas" className="space-y-8 animate-nomu-fade bg-[#FFF9F6]">
+    <div id="executive-dashboard-canvas" className="space-y-6 animate-nomu-fade bg-[#FFF9F6]">
       {/* BI Command Center Header (Nomu Floating Bar) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-3">
           <Logo size="md" showWordmark={true} />
           <div className="hidden sm:block h-6 w-px bg-black/[0.08]" />
           <div className="hidden sm:block text-xs font-bold text-[#71717A] uppercase tracking-wider">
-            Decision Report
+            Decision Suite
           </div>
         </div>
 
@@ -380,7 +417,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
             {copiedBriefing ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-700">Copied to Clipboard!</span>
+                <span className="text-emerald-700">Copied Briefing!</span>
               </>
             ) : (
               <>
@@ -395,10 +432,10 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
             onClick={handleExportPDF}
             disabled={isExportingPDF}
             className="nomu-pill px-5 py-2.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            title="Download Executive PDF"
+            title="Download Executive PDF Deck"
           >
             {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-[#FF7448]" />}
-            <span>{isExportingPDF ? 'Generating...' : 'Export PDF'}</span>
+            <span>{isExportingPDF ? 'Rendering Deck...' : 'Export PDF'}</span>
           </button>
 
           <button 
@@ -417,375 +454,408 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
         </div>
       </div>
 
-      {/* ⚡ Executive 30-Second Briefing Strip & Health Score */}
-      <div className="bg-white p-6 sm:p-7 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.04]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#FFF0EB] flex items-center justify-center text-[#FF7448]">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-[#0E0E10] tracking-tight">Executive 30-Second Briefing</h3>
-              <p className="text-[11px] text-[#71717A]">Plain-English boardroom summary derived from {filteredData.length.toLocaleString()} records</p>
-            </div>
-          </div>
-
-          {/* Health Score Gauge */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#FAF4ED] border border-black/[0.04]">
-            <span className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">Health Index:</span>
-            <span className="text-sm font-black text-[#0E0E10]">{executiveTakeaways.healthIndex}/100</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-        </div>
-
-        {/* 3 Highlight Pillar Chips */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* 1. Momentum Driver */}
-          <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
-              <TrendingUp className="w-3.5 h-3.5" /> What Drives Your Sales
-            </div>
-            <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
-              {executiveTakeaways.topDriver}
-            </p>
-          </div>
-
-          {/* 2. Diagnostic Root Cause */}
-          <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600">
-              <Activity className="w-3.5 h-3.5" /> Why Numbers Move
-            </div>
-            <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
-              {executiveTakeaways.diagnostic}
-            </p>
-          </div>
-
-          {/* 3. Prescriptive Priority */}
-          <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
-              <Lightbulb className="w-3.5 h-3.5" /> Decision to Make Today
-            </div>
-            <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
-              {executiveTakeaways.prescriptive}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Slicer Strip */}
-      <div className="bg-white p-5 rounded-[28px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#0E0E10] uppercase tracking-wider">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#FF7448]" /> Slicers:
-            </div>
-
-            {/* Category Slicer */}
-            {availableCategories.length > 0 && (
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="bg-[#FAF4ED] rounded-full px-4 py-2 text-xs font-bold text-[#0E0E10] focus:outline-none focus:ring-1 focus:ring-[#0E0E10] cursor-pointer border-none"
-                >
-                  <option value="ALL">All {dimCol}s ({availableCategories.length})</option>
-                  {availableCategories.map((cat, i) => (
-                    <option key={i} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Keyword Search */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-[#71717A] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search values..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                className="bg-[#FAF4ED] rounded-full pl-9 pr-4 py-2 text-xs text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:ring-1 focus:ring-[#0E0E10] w-44 sm:w-56"
-              />
-            </div>
-
-            {/* Reset */}
-            {isFiltered && (
+      {/* 🧭 Top Stage Navigation Menus (Eliminates Endless Single-Page Scroll) */}
+      <div className="bg-white p-2 rounded-[28px] border border-black/[0.06] shadow-[0_8px_20px_-8px_rgba(0,0,0,0.04)] sticky top-4 z-40">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1">
+          {DASHBOARD_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
               <button
-                onClick={() => {
-                  setSelectedCategory('ALL');
-                  setSearchKeyword('');
-                }}
-                className="nomu-pill flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold cursor-pointer"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`nomu-pill px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                  isActive 
+                    ? 'bg-[#0E0E10] text-white shadow-xs' 
+                    : 'text-[#71717A] hover:text-[#0E0E10] hover:bg-[#FAF4ED]'
+                }`}
               >
-                <RotateCcw className="w-3 h-3" /> Reset
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#FF7448]' : 'text-[#71717A]'}`} />
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-[#FAF4ED] text-[#71717A]'
+                }`}>
+                  {tab.tag}
+                </span>
               </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isFiltered ? (
-              <span className="px-3.5 py-1.5 bg-[#FFF0EB] border border-[#FFD5C7] text-[#FF7448] font-bold rounded-full text-xs flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#FF7448] animate-ping" />
-                Active Slice: {filteredData.length.toLocaleString()} of {data.length.toLocaleString()} ({((filteredData.length / data.length) * 100).toFixed(1)}%)
-              </span>
-            ) : (
-              <span className="text-xs text-[#71717A]">
-                Showing full volume ({data.length.toLocaleString()} rows)
-              </span>
-            )}
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Metric Tiles Tier (Nomu Tactile Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {activeKPIs.map((kpi, idx) => (
-          <div key={idx} className="nomu-card bg-white p-6 rounded-[28px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-3">
-            <p className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">{kpi.label}</p>
-            <div className="flex items-end justify-between">
-              <div>
-                <span className="text-3xl font-black text-[#0E0E10] tracking-tight">{kpi.value}</span>
-                {kpi.change && (
-                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold mt-2 ml-2 ${
-                    kpi.trend === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {kpi.trend === 'up' && <ArrowUpRight className="w-3 h-3 mr-0.5" />}
-                    {kpi.change}
+      {/* =========================================================
+          VIEW 1: OVERVIEW & CHARTS VISUALS
+          ========================================================= */}
+      {showOverview && (
+        <div className="space-y-6 animate-nomu-fade">
+          {/* ⚡ Executive 30-Second Briefing Strip & Health Score */}
+          <div className="bg-white p-6 sm:p-7 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.04]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#FFF0EB] flex items-center justify-center text-[#FF7448]">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#0E0E10] tracking-tight">Executive 30-Second Briefing</h3>
+                  <p className="text-[11px] text-[#71717A]">Plain-English boardroom summary derived from {filteredData.length.toLocaleString()} records</p>
+                </div>
+              </div>
+
+              {/* Health Score Gauge */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#FAF4ED] border border-black/[0.04]">
+                <span className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">Health Index:</span>
+                <span className="text-sm font-black text-[#0E0E10]">{executiveTakeaways.healthIndex}/100</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+            </div>
+
+            {/* 3 Highlight Pillar Chips */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* 1. Momentum Driver */}
+              <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
+                  <TrendingUp className="w-3.5 h-3.5" /> What Drives Your Sales
+                </div>
+                <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
+                  {executiveTakeaways.topDriver}
+                </p>
+              </div>
+
+              {/* 2. Diagnostic Root Cause */}
+              <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                  <Activity className="w-3.5 h-3.5" /> Why Numbers Move
+                </div>
+                <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
+                  {executiveTakeaways.diagnostic}
+                </p>
+              </div>
+
+              {/* 3. Prescriptive Priority */}
+              <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                  <Lightbulb className="w-3.5 h-3.5" /> Decision to Make Today
+                </div>
+                <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
+                  {executiveTakeaways.prescriptive}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Slicer Strip */}
+          <div className="bg-white p-5 rounded-[28px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#0E0E10] uppercase tracking-wider">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#FF7448]" /> Slicers:
+                </div>
+
+                {/* Category Slicer */}
+                {availableCategories.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-[#FAF4ED] rounded-full px-4 py-2 text-xs font-bold text-[#0E0E10] focus:outline-none focus:ring-1 focus:ring-[#0E0E10] cursor-pointer border-none"
+                    >
+                      <option value="ALL">All {dimCol}s ({availableCategories.length})</option>
+                      {availableCategories.map((cat, i) => (
+                        <option key={i} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                   </div>
+                )}
+
+                {/* Keyword Search */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-[#71717A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search values..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="bg-[#FAF4ED] rounded-full pl-9 pr-4 py-2 text-xs text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:ring-1 focus:ring-[#0E0E10] w-44 sm:w-56"
+                  />
+                </div>
+
+                {/* Reset */}
+                {isFiltered && (
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('ALL');
+                      setSearchKeyword('');
+                    }}
+                    className="nomu-pill flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isFiltered ? (
+                  <span className="px-3.5 py-1.5 bg-[#FFF0EB] border border-[#FFD5C7] text-[#FF7448] font-bold rounded-full text-xs flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#FF7448] animate-ping" />
+                    Active Slice: {filteredData.length.toLocaleString()} of {data.length.toLocaleString()} ({((filteredData.length / data.length) * 100).toFixed(1)}%)
+                  </span>
+                ) : (
+                  <span className="text-xs text-[#71717A]">
+                    Showing full volume ({data.length.toLocaleString()} rows)
+                  </span>
                 )}
               </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Inspector Details Card */}
-      {selectedElement && (
-        <div className="bg-white p-6 rounded-[28px] border border-black/[0.08] shadow-lg animate-nomu-fade flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Inspect Element</span>
-            <h4 className="text-base font-bold text-[#0E0E10]">
-              Selected: <span className="text-[#FF7448]">"{selectedElement.label}"</span> ({selectedElement.chartName})
-            </h4>
-            <p className="text-xs text-[#71717A] mt-0.5">
-              Value: <strong>{selectedElement.value.toLocaleString()}</strong> 
-              {selectedElement.percent !== undefined && ` (${selectedElement.percent.toFixed(1)}% of chart total)`}
-            </p>
-          </div>
-          <button 
-            onClick={() => setSelectedElement(null)}
-            className="nomu-pill px-4 py-2 rounded-full text-xs font-bold text-[#71717A] hover:text-black bg-[#FAF4ED] cursor-pointer"
-          >
-            Clear Selection
-          </button>
-        </div>
-      )}
-
-      {/* Charts & Plain-English Decision Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {(() => {
-          const isTabular = analysis.metadata?.dataset_type === 'structured_tabular';
-          const metricLabel = analysis.metadata?.metric_name ?? "Value";
-          const dimLabel = analysis.metadata?.dimension_name ?? "Category";
-          const secDimLabel = analysis.metadata?.sec_dimension_name ?? "Categories";
-
-          // Plain-English computations
-          const topComp = activeOverview.composition[0];
-          const topCompShare = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
-          const topCompPct = topCompShare > 0 && topComp ? Math.round((topComp.value / topCompShare) * 100) : 40;
-
-          return (
-            <>
-              {/* 1. Trend Chart / Matrix */}
-              <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
-                        {isTabular ? `${metricLabel} Trajectory by ${dimLabel}` : "Performance Velocity"}
-                      </h4>
-                      <p className="text-xs text-[#71717A]">
-                        {trendViewMode === 'chart' ? 'Click any point to inspect volume' : 'Aggregated numbers table'}
-                      </p>
-                    </div>
-
-                    {/* Chart vs Matrix Toggle */}
-                    <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
-                      <button
-                        onClick={() => setTrendViewMode('chart')}
-                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                          trendViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                        }`}
-                      >
-                        Chart
-                      </button>
-                      <button
-                        onClick={() => setTrendViewMode('table')}
-                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                          trendViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                        }`}
-                      >
-                        Matrix
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="h-[280px]">
-                    {trendViewMode === 'chart' ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart 
-                          data={activeOverview.trend}
-                          onClick={(state) => {
-                            if (state && state.activePayload && state.activePayload.length) {
-                              const p = state.activePayload[0].payload;
-                              handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Trajectory", p.name, p.value, activeOverview.trend);
-                            }
-                          }}
-                        >
-                          <defs>
-                            <linearGradient id="colorNomu" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#FF7448" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#FFF9F6" stopOpacity={0.0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAF4ED" />
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}} 
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}}
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Area 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#FF7448" 
-                            fillOpacity={1} 
-                            fill="url(#colorNomu)" 
-                            strokeWidth={2.5}
-                            className="cursor-pointer"
-                          >
-                            <LabelList dataKey="value" position="top" style={{ fill: '#0E0E10', fontSize: 10, fontWeight: 700 }} formatter={(value: number) => value.toFixed(0)} />
-                          </Area>
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="overflow-y-auto h-full rounded-2xl border border-black/[0.04]">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
-                            <tr>
-                              <th className="p-3">#</th>
-                              <th className="p-3">Dimension ({dimLabel})</th>
-                              <th className="p-3 text-right">Volume ({metricLabel})</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-black/[0.03]">
-                            {activeOverview.trend.map((row, idx) => (
-                              <tr key={idx} className="hover:bg-[#FAF4ED]/50 transition-colors">
-                                <td className="p-3 font-mono text-[#71717A] text-[10px]">{idx + 1}</td>
-                                <td className="p-3 font-bold text-[#0E0E10]">{row.name}</td>
-                                <td className="p-3 text-right font-mono font-bold text-[#FF7448]">{row.value.toLocaleString()}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+          {/* Metric Tiles Tier */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {activeKPIs.map((kpi, idx) => (
+              <div key={idx} className="nomu-card bg-white p-6 rounded-[28px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-3">
+                <p className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">{kpi.label}</p>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <span className="text-3xl font-black text-[#0E0E10] tracking-tight">{kpi.value}</span>
+                    {kpi.change && (
+                      <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold mt-2 ml-2 ${
+                        kpi.trend === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {kpi.trend === 'up' && <ArrowUpRight className="w-3 h-3 mr-0.5" />}
+                        {kpi.change}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* Plain-English Insight & Action Box */}
-                <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
-                    <Lightbulb className="w-3.5 h-3.5" /> What This Means For You:
-                  </div>
-                  <p className="text-xs text-[#0E0E10] font-normal leading-relaxed">
-                    Volume rises sharply in peak clusters and dips during intermediate periods. 
-                    <strong className="text-[#0E0E10]"> Ready-Made Decision: </strong> 
-                    Schedule flash discounts and push promotional notifications 48 hours before low-volume troughs to smooth out revenue dips.
-                  </p>
-                </div>
               </div>
+            ))}
+          </div>
 
-              {/* 2. Composition Pie / Matrix with EXPLICIT SLICE LABELS */}
-              <div className="lg:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
-                      {isTabular ? `${metricLabel} Share` : "Category Breakdown"}
-                    </h4>
+          {/* Inspector Details Card */}
+          {selectedElement && (
+            <div className="bg-white p-6 rounded-[28px] border border-black/[0.08] shadow-lg animate-nomu-fade flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Inspect Element</span>
+                <h4 className="text-base font-bold text-[#0E0E10]">
+                  Selected: <span className="text-[#FF7448]">"{selectedElement.label}"</span> ({selectedElement.chartName})
+                </h4>
+                <p className="text-xs text-[#71717A] mt-0.5">
+                  Value: <strong>{selectedElement.value.toLocaleString()}</strong> 
+                  {selectedElement.percent !== undefined && ` (${selectedElement.percent.toFixed(1)}% of chart total)`}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedElement(null)}
+                className="nomu-pill px-4 py-2 rounded-full text-xs font-bold text-[#71717A] hover:text-black bg-[#FAF4ED] cursor-pointer"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
 
-                    {/* Chart vs Matrix Toggle */}
-                    <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
-                      <button
-                        onClick={() => setCompViewMode('chart')}
-                        className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                          compViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                        }`}
-                      >
-                        Chart
-                      </button>
-                      <button
-                        onClick={() => setCompViewMode('table')}
-                        className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                          compViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                        }`}
-                      >
-                        Matrix
-                      </button>
+          {/* Charts & Plain-English Decision Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {(() => {
+              const isTabular = analysis.metadata?.dataset_type === 'structured_tabular';
+              const metricLabel = analysis.metadata?.metric_name ?? "Value";
+              const dimLabel = analysis.metadata?.dimension_name ?? "Category";
+              const secDimLabel = analysis.metadata?.sec_dimension_name ?? "Categories";
+
+              const topComp = activeOverview.composition[0];
+              const topCompShare = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
+              const topCompPct = topCompShare > 0 && topComp ? Math.round((topComp.value / topCompShare) * 100) : 40;
+
+              return (
+                <>
+                  {/* 1. Trend Chart / Matrix */}
+                  <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
+                            {isTabular ? `${metricLabel} Trajectory by ${dimLabel}` : "Performance Velocity"}
+                          </h4>
+                          <p className="text-xs text-[#71717A]">
+                            {trendViewMode === 'chart' ? 'Click any point to inspect volume' : 'Aggregated numbers table'}
+                          </p>
+                        </div>
+
+                        {/* Chart vs Matrix Toggle */}
+                        <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
+                          <button
+                            onClick={() => setTrendViewMode('chart')}
+                            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+                              trendViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                            }`}
+                          >
+                            Chart
+                          </button>
+                          <button
+                            onClick={() => setTrendViewMode('table')}
+                            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+                              trendViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                            }`}
+                          >
+                            Matrix
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="h-[280px]">
+                        {trendViewMode === 'chart' ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart 
+                              data={activeOverview.trend}
+                              onClick={(state) => {
+                                if (state && state.activePayload && state.activePayload.length) {
+                                  const p = state.activePayload[0].payload;
+                                  handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Trajectory", p.name, p.value, activeOverview.trend);
+                                }
+                              }}
+                            >
+                              <defs>
+                                <linearGradient id="colorNomu" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#FF7448" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#FFF9F6" stopOpacity={0.0}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAF4ED" />
+                              <XAxis 
+                                dataKey="name" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}} 
+                              />
+                              <YAxis 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}}
+                              />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Area 
+                                type="monotone" 
+                                dataKey="value" 
+                                stroke="#FF7448" 
+                                fillOpacity={1} 
+                                fill="url(#colorNomu)" 
+                                strokeWidth={2.5}
+                                className="cursor-pointer"
+                              >
+                                <LabelList dataKey="value" position="top" style={{ fill: '#0E0E10', fontSize: 10, fontWeight: 700 }} formatter={(value: number) => value.toFixed(0)} />
+                              </Area>
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="overflow-y-auto h-full rounded-2xl border border-black/[0.04]">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
+                                <tr>
+                                  <th className="p-3">#</th>
+                                  <th className="p-3">Dimension ({dimLabel})</th>
+                                  <th className="p-3 text-right">Volume ({metricLabel})</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-black/[0.03]">
+                                {activeOverview.trend.map((row, idx) => (
+                                  <tr key={idx} className="hover:bg-[#FAF4ED]/50 transition-colors">
+                                    <td className="p-3 font-mono text-[#71717A] text-[10px]">{idx + 1}</td>
+                                    <td className="p-3 font-bold text-[#0E0E10]">{row.name}</td>
+                                    <td className="p-3 text-right font-mono font-bold text-[#FF7448]">{row.value.toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Plain-English Insight & Action Box */}
+                    <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
+                        <Lightbulb className="w-3.5 h-3.5" /> What This Means For You:
+                      </div>
+                      <p className="text-xs text-[#0E0E10] font-normal leading-relaxed">
+                        Volume clusters heavily during specific cycle intervals.
+                        <strong className="text-[#0E0E10]"> Ready-Made Decision: </strong> 
+                        Push promotional notifications 48 hours before identified low-volume periods to prevent cash flow dips.
+                      </p>
                     </div>
                   </div>
-                  <p className="text-xs text-[#71717A]">
-                    {compViewMode === 'chart' ? 'Category names & percentages labeled on each slice' : 'Percentage table'}
-                  </p>
-                </div>
 
-                <div className="h-[260px] flex items-center justify-center my-2">
-                  {compViewMode === 'chart' ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={activeOverview.composition}
-                          innerRadius={46}
-                          outerRadius={70}
-                          paddingAngle={3}
-                          dataKey="value"
-                          nameKey="label"
-                          label={renderCustomizedPieLabel}
-                          labelLine={{ stroke: '#0E0E10', strokeWidth: 1 }}
-                          className="cursor-pointer"
-                          onClick={(data) => {
-                            if (data) {
-                              const p = data.payload || data;
-                              handleChartClick(isTabular ? `${metricLabel} Share` : "Category Split", p.name || p.label, p.value, activeOverview.composition);
-                            }
-                          }}
-                        >
-                          {activeOverview.composition.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="overflow-y-auto h-full w-full rounded-2xl border border-black/[0.04]">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
-                          <tr>
-                            <th className="p-2.5">Category</th>
-                            <th className="p-2.5 text-right">Share</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-black/[0.03]">
-                          {(() => {
-                            const totalComp = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
-                            return activeOverview.composition.map((c, idx) => (
+                  {/* 2. Composition Pie / Matrix with EXPLICIT SLICE LABELS */}
+                  <div className="lg:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
+                          {isTabular ? `${metricLabel} Share` : "Category Breakdown"}
+                        </h4>
+
+                        {/* Chart vs Matrix Toggle */}
+                        <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
+                          <button
+                            onClick={() => setCompViewMode('chart')}
+                            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                              compViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                            }`}
+                          >
+                            Chart
+                          </button>
+                          <button
+                            onClick={() => setCompViewMode('table')}
+                            className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                              compViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                            }`}
+                          >
+                            Matrix
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-[#71717A]">
+                        {compViewMode === 'chart' ? 'Category names & percentages labeled on each slice' : 'Percentage table'}
+                      </p>
+                    </div>
+
+                    <div className="h-[260px] flex items-center justify-center my-2">
+                      {compViewMode === 'chart' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={activeOverview.composition}
+                              innerRadius={46}
+                              outerRadius={70}
+                              paddingAngle={3}
+                              dataKey="value"
+                              nameKey="label"
+                              label={renderCustomizedPieLabel}
+                              labelLine={{ stroke: '#0E0E10', strokeWidth: 1 }}
+                              className="cursor-pointer"
+                              onClick={(data) => {
+                                if (data) {
+                                  const p = data.payload || data;
+                                  handleChartClick(isTabular ? `${metricLabel} Share` : "Category Split", p.name || p.label, p.value, activeOverview.composition);
+                                }
+                              }}
+                            >
+                              {activeOverview.composition.map((_, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<CustomTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="overflow-y-auto h-full w-full rounded-2xl border border-black/[0.04]">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
+                              <tr>
+                                <th className="p-2.5">Category</th>
+                                <th className="p-2.5 text-right">Share</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-black/[0.03]">
+                              {(() => {
+                                const totalComp = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
+                                return activeOverview.composition.map((c, idx) => (
                               <tr key={idx} className="hover:bg-[#FAF4ED]/50 transition-colors">
                                 <td className="p-2.5 font-bold text-[#0E0E10] flex items-center gap-1.5 truncate max-w-[120px]">
                                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
@@ -810,7 +880,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                   </div>
                   <p className="text-[11px] text-[#0E0E10] leading-snug font-normal">
                     {topComp ? `"${topComp.label}" generates ~${topCompPct}% of business. ` : 'Your top segment controls the majority. '}
-                    Allocate 60% of your promotional budget to this category to protect revenue.
+                    Allocate 60% of inventory budget to this category to protect core cash flow.
                   </p>
                 </div>
               </div>
@@ -920,252 +990,279 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           );
         })()}
       </div>
+    </div>
+  )}
 
-      {/* 4-Tier Editorial Narrative with Plain-English Translations & Ready-Made Decisions */}
-      <div className="space-y-8 mt-12">
-        {/* Tier 1: Descriptive Summary */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-5">
-          <SectionHeader 
-            icon={BarChart2} 
-            title="1. Descriptive Summary &amp; Plain-English Meaning" 
-            subtitle="Observed patterns translated into everyday business language."
-          />
-          <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
-            {analysis.descriptive.narrative}
+  {/* =========================================================
+      VIEW 2: DESCRIPTIVE SUMMARY
+      ========================================================= */}
+  {showDescriptive && (
+    <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-5 animate-nomu-fade">
+      <SectionHeader 
+        icon={BarChart2} 
+        title="1. Descriptive Summary &amp; Plain-English Meaning" 
+        subtitle="Observed patterns translated into everyday business language."
+      />
+      <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
+        {analysis.descriptive.narrative}
+      </p>
+
+      {/* Plain-English Takeaway Pill */}
+      <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FF7448]/20 flex items-start gap-3">
+        <div className="w-7 h-7 rounded-full bg-[#FF7448] text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+          💡
+        </div>
+        <div>
+          <p className="text-xs font-bold text-[#0E0E10]">Plain-English Bottom Line:</p>
+          <p className="text-xs text-[#71717A] mt-0.5 leading-relaxed">
+            Your business is heavily powered by a concentrated core of high-volume transactions. While this creates strong cash flow, a drop in this specific category would immediately hurt your bottom line. Diversification is your safest long-term play.
           </p>
-
-          {/* Plain-English Takeaway Pill */}
-          <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FF7448]/20 flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full bg-[#FF7448] text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
-              💡
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[#0E0E10]">Plain-English Bottom Line:</p>
-              <p className="text-xs text-[#71717A] mt-0.5 leading-relaxed">
-                Your business is heavily powered by a concentrated core of high-volume transactions. While this creates strong cash flow, a drop in this specific category would immediately hurt your bottom line. Diversification is your safest long-term play.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Tier 2: Diagnostic Deep Dive */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6">
-          <SectionHeader 
-            icon={Activity} 
-            title="2. Diagnostic Cause &amp; Effect" 
-            subtitle="What is actually causing your numbers to go up or down."
-          />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div className="space-y-4">
-              <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
-                {analysis.diagnostic.narrative}
-              </p>
-              <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1">
-                <span className="text-[10px] font-bold uppercase text-amber-700">Root Cause Translation:</span>
-                <p className="text-xs text-[#0E0E10] leading-relaxed">
-                  These aren't just random mathematical stats. The strong correlation factors below show the exact levers that dictate customer purchasing and churn.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h5 className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">
-                Key Moving Levers &amp; Impact
-              </h5>
-              {analysis.diagnostic.correlations.map((corr, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-[#FAF4ED] space-y-2 border border-black/[0.03]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-[#0E0E10]">{corr.factor}</p>
-                      <p className="text-[11px] text-[#71717A]">{corr.relationship}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-black/[0.08] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#FF7448] rounded-full" style={{ width: `${corr.strength * 100}%` }} />
-                      </div>
-                      <span className="text-xs font-mono font-bold text-[#0E0E10]">{(corr.strength * 100).toFixed(0)}%</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-[#0E0E10] font-medium pt-1 border-t border-black/[0.04]">
-                    ⚡ <strong>Action:</strong> Adjusting this factor gives you direct control over performance swings.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Tier 3: Predictive Horizon (Nomu Dark Ink Card) */}
-        <section className="bg-[#0E0E10] text-white rounded-[32px] p-8 sm:p-10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.2)] relative overflow-hidden space-y-6">
-          <div className="relative z-10 space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#FF7448]">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">3. Predictive Forecast &amp; Early Warning</h3>
-                <p className="text-white/60 text-xs font-normal mt-0.5">What is expected to happen next and how to prepare.</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-8 h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={analysis.predictive.forecast}>
-                    <defs>
-                      <linearGradient id="colorPred" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#FF7448" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#0E0E10" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fill: '#A1A1AA', fontSize: 10}} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#A1A1AA', fontSize: 10}} />
-                    <Tooltip contentStyle={{backgroundColor: '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px'}} />
-                    <Area type="monotone" dataKey="predicted" stroke="#FF7448" fillOpacity={1} fill="url(#colorPred)" strokeWidth={2.5}>
-                      <LabelList dataKey="predicted" position="top" style={{ fill: '#fff', fontSize: 10, fontWeight: 700 }} formatter={(v: number) => v.toFixed(1)} />
-                    </Area>
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="lg:col-span-4 p-6 rounded-2xl bg-white/5 border border-white/10 text-center space-y-2">
-                <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Model Confidence</span>
-                <p className="text-5xl font-black text-white">{(analysis.predictive.confidence * 100).toFixed(0)}%</p>
-                <p className="text-xs text-white/50">{analysis.predictive.modelExplanation}</p>
-              </div>
-            </div>
-
-            <p className="text-white/80 text-xs sm:text-sm leading-relaxed pt-4 border-t border-white/10">
-              {analysis.predictive.narrative}
-            </p>
-
-            <div className="p-4 rounded-2xl bg-white/10 border border-white/15 flex items-center gap-3">
-              <div className="text-xl">🎯</div>
-              <div>
-                <p className="text-xs font-bold text-white">Preparation Strategy:</p>
-                <p className="text-xs text-white/70">
-                  Based on projected trajectory, prepare staffing and supply orders 2 weeks ahead of scheduled peaks to avoid out-of-stock losses.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Tier 4: Prescriptive Strategic Actions & Ready-Made Decision Matrix */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6">
-          <SectionHeader 
-            icon={Lightbulb} 
-            title="4. Ready-Made Decisions &amp; Action Plan" 
-            subtitle="Clear, step-by-step business moves you can execute today."
-          />
-
-          {/* Action Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {analysis.prescriptive.recommendations.map((rec, idx) => {
-              const steps = getPlanSteps(rec.action, rec.plan);
-              const recChecked = checkedSteps[rec.action] || {};
-              const checkedCount = steps.filter((_, sIdx) => recChecked[sIdx]).length;
-              const isCompleted = checkedCount === steps.length && steps.length > 0;
-
-              return (
-                <div 
-                  key={idx} 
-                  className={`p-6 rounded-[28px] border transition-all flex flex-col justify-between space-y-4 ${
-                    isCompleted ? 'bg-emerald-50/40 border-emerald-300' : 'bg-[#FAF4ED] border-black/[0.04] hover:border-black/[0.12]'
-                  }`}
-                >
-                  <div className="space-y-2">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white text-[#0E0E10] border border-black/[0.06]">
-                      {rec.priority} Priority Decision
-                    </span>
-                    <h5 className="text-base font-bold text-[#0E0E10] pt-1">{rec.action}</h5>
-                    <p className="text-xs text-[#71717A] leading-relaxed">{rec.impact}</p>
-                  </div>
-
-                  <div className="pt-4 border-t border-black/[0.06] flex items-center justify-between">
-                    <button
-                      onClick={() => setActivePlan({ action: rec.action, plan: rec.plan })}
-                      className="nomu-pill text-xs font-bold text-[#0E0E10] hover:text-[#FF7448] flex items-center gap-1 cursor-pointer"
-                    >
-                      {isCompleted ? 'Review Steps' : 'View Action Steps'} <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
-                    {checkedCount > 0 && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                        {isCompleted ? '✓ Completed' : `${checkedCount}/${steps.length}`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#FAF4ED] text-xs text-[#71717A] space-y-2">
-            <p className="font-semibold text-[#0E0E10]">Executive Synthesis:</p>
-            <p className="leading-relaxed">{analysis.prescriptive.narrative}</p>
-          </div>
-        </section>
+        </div>
       </div>
+    </section>
+  )}
 
-      {/* Checklist Plan Modal (Nomu-style) */}
-      {activePlan && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-nomu-fade">
-          <div className="bg-white w-full max-w-md rounded-[32px] p-8 border border-black/[0.08] shadow-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Action Checklist</span>
-                <h4 className="text-lg font-bold text-[#0E0E10]">{activePlan.action}</h4>
-              </div>
-              <button
-                onClick={() => setActivePlan(null)}
-                className="w-8 h-8 rounded-full bg-[#FAF4ED] hover:bg-black hover:text-white text-[#0E0E10] flex items-center justify-center transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {getPlanSteps(activePlan.action, activePlan.plan).map((step, sIdx) => {
-                const isChecked = checkedSteps[activePlan.action]?.[sIdx] || false;
-                return (
-                  <div 
-                    key={sIdx}
-                    onClick={() => {
-                      setCheckedSteps(prev => ({
-                        ...prev,
-                        [activePlan.action]: {
-                          ...(prev[activePlan.action] || {}),
-                          [sIdx]: !isChecked
-                        }
-                      }));
-                    }}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                      isChecked ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#FAF4ED] border-black/[0.04]'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                      isChecked ? 'bg-emerald-600 text-white' : 'border border-black/20 bg-white'
-                    }`}>
-                      {isChecked && <Check className="w-3 h-3" />}
-                    </div>
-                    <span className={`text-xs ${isChecked ? 'line-through text-[#71717A]' : 'text-[#0E0E10] font-medium'}`}>
-                      {step}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={handleAcknowledge}
-              className="nomu-pill w-full py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
-            >
-              Acknowledge &amp; Mark All Complete
-            </button>
+  {/* =========================================================
+      VIEW 3: DIAGNOSTIC CAUSE & EFFECT
+      ========================================================= */}
+  {showDiagnostic && (
+    <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6 animate-nomu-fade">
+      <SectionHeader 
+        icon={Activity} 
+        title="2. Diagnostic Cause &amp; Effect" 
+        subtitle="What is actually causing your numbers to go up or down."
+      />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="space-y-4">
+          <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
+            {analysis.diagnostic.narrative}
+          </p>
+          <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1">
+            <span className="text-[10px] font-bold uppercase text-amber-700">Root Cause Translation:</span>
+            <p className="text-xs text-[#0E0E10] leading-relaxed">
+              These aren't just random mathematical stats. The strong correlation factors below show the exact levers that dictate customer purchasing and churn.
+            </p>
           </div>
         </div>
-      )}
-    </div>
+
+        <div className="space-y-3">
+          <h5 className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">
+            Key Moving Levers &amp; Impact
+          </h5>
+          {analysis.diagnostic.correlations.map((corr, idx) => (
+            <div key={idx} className="p-4 rounded-2xl bg-[#FAF4ED] space-y-2 border border-black/[0.03]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-[#0E0E10]">{corr.factor}</p>
+                  <p className="text-[11px] text-[#71717A]">{corr.relationship}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-2 bg-black/[0.08] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#FF7448] rounded-full" style={{ width: `${corr.strength * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#0E0E10]">{(corr.strength * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-[#0E0E10] font-medium pt-1 border-t border-black/[0.04]">
+                ⚡ <strong>Action:</strong> Adjusting this factor gives you direct control over performance swings.
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* =========================================================
+      VIEW 4: PREDICTIVE FORECAST
+      ========================================================= */}
+  {showPredictive && (
+    <section className="bg-[#0E0E10] text-white rounded-[32px] p-8 sm:p-10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.2)] relative overflow-hidden space-y-6 animate-nomu-fade">
+      <div className="relative z-10 space-y-6">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#FF7448]">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">3. Predictive Forecast &amp; Early Warning</h3>
+            <p className="text-white/60 text-xs font-normal mt-0.5">What is expected to happen next and how to prepare.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-8 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={analysis.predictive.forecast}>
+                <defs>
+                  <linearGradient id="colorPred" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#FF7448" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#0E0E10" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fill: '#A1A1AA', fontSize: 10}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#A1A1AA', fontSize: 10}} />
+                <Tooltip contentStyle={{backgroundColor: '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px'}} />
+                <Area type="monotone" dataKey="predicted" stroke="#FF7448" fillOpacity={1} fill="url(#colorPred)" strokeWidth={2.5}>
+                  <LabelList dataKey="predicted" position="top" style={{ fill: '#fff', fontSize: 10, fontWeight: 700 }} formatter={(v: number) => v.toFixed(1)} />
+                </Area>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="lg:col-span-4 p-6 rounded-2xl bg-white/5 border border-white/10 text-center space-y-2">
+            <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">Model Confidence</span>
+            <p className="text-5xl font-black text-white">{(analysis.predictive.confidence * 100).toFixed(0)}%</p>
+            <p className="text-xs text-white/50">{analysis.predictive.modelExplanation}</p>
+          </div>
+        </div>
+
+        <p className="text-white/80 text-xs sm:text-sm leading-relaxed pt-4 border-t border-white/10">
+          {analysis.predictive.narrative}
+        </p>
+
+        <div className="p-4 rounded-2xl bg-white/10 border border-white/15 flex items-center gap-3">
+          <div className="text-xl">🎯</div>
+          <div>
+            <p className="text-xs font-bold text-white">Preparation Strategy:</p>
+            <p className="text-xs text-white/70">
+              Based on projected trajectory, prepare staffing and supply orders 2 weeks ahead of scheduled peaks to avoid out-of-stock losses.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  {/* =========================================================
+      VIEW 5: PRESCRIPTIVE STRATEGIC ACTIONS
+      ========================================================= */}
+  {showPrescriptive && (
+    <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6 animate-nomu-fade">
+      <SectionHeader 
+        icon={Lightbulb} 
+        title="4. Ready-Made Decisions &amp; Action Plan" 
+        subtitle="Clear, step-by-step business moves you can execute today."
+      />
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {analysis.prescriptive.recommendations.map((rec, idx) => {
+          const steps = getPlanSteps(rec.action, rec.plan);
+          const recChecked = checkedSteps[rec.action] || {};
+          const checkedCount = steps.filter((_, sIdx) => recChecked[sIdx]).length;
+          const isCompleted = checkedCount === steps.length && steps.length > 0;
+
+          return (
+            <div 
+              key={idx} 
+              className={`p-6 rounded-[28px] border transition-all flex flex-col justify-between space-y-4 ${
+                isCompleted ? 'bg-emerald-50/40 border-emerald-300' : 'bg-[#FAF4ED] border-black/[0.04] hover:border-black/[0.12]'
+              }`}
+            >
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white text-[#0E0E10] border border-black/[0.06]">
+                  {rec.priority} Priority Decision
+                </span>
+                <h5 className="text-base font-bold text-[#0E0E10] pt-1">{rec.action}</h5>
+                <p className="text-xs text-[#71717A] leading-relaxed">{rec.impact}</p>
+              </div>
+
+              <div className="pt-4 border-t border-black/[0.06] flex items-center justify-between">
+                <button
+                  onClick={() => setActivePlan({ action: rec.action, plan: rec.plan })}
+                  className="nomu-pill text-xs font-bold text-[#0E0E10] hover:text-[#FF7448] flex items-center gap-1 cursor-pointer"
+                >
+                  {isCompleted ? 'Review Steps' : 'View Action Steps'} <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+                {checkedCount > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    {isCompleted ? '✓ Completed' : `${checkedCount}/${steps.length}`}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="p-6 rounded-2xl bg-[#FAF4ED] text-xs text-[#71717A] space-y-2">
+        <p className="font-semibold text-[#0E0E10]">Executive Synthesis:</p>
+        <p className="leading-relaxed">{analysis.prescriptive.narrative}</p>
+      </div>
+    </section>
+  )}
+
+  {/* =========================================================
+      FIXED VIEW ACTION STEPS MODAL (Rendered via React Portal)
+      Guaranteed pinned to center of viewport, zero page scrolling!
+      ========================================================= */}
+  {activePlan && createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-md z-[99999] flex items-center justify-center p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setActivePlan(null);
+      }}
+    >
+      <div 
+        className="bg-white w-full max-w-md rounded-[32px] p-6 sm:p-8 border border-black/[0.08] shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Action Checklist</span>
+            <h4 className="text-lg font-black text-[#0E0E10] tracking-tight mt-0.5">{activePlan.action}</h4>
+          </div>
+          <button
+            onClick={() => setActivePlan(null)}
+            className="w-8 h-8 rounded-full bg-[#FAF4ED] hover:bg-black hover:text-white text-[#0E0E10] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+          {getPlanSteps(activePlan.action, activePlan.plan).map((step, sIdx) => {
+            const isChecked = checkedSteps[activePlan.action]?.[sIdx] || false;
+            return (
+              <div 
+                key={sIdx}
+                onClick={() => {
+                  setCheckedSteps(prev => ({
+                    ...prev,
+                    [activePlan.action]: {
+                      ...(prev[activePlan.action] || {}),
+                      [sIdx]: !isChecked
+                    }
+                  }));
+                }}
+                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                  isChecked ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#FAF4ED] border-black/[0.04]'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                  isChecked ? 'bg-emerald-600 text-white' : 'border border-black/20 bg-white'
+                }`}>
+                  {isChecked && <Check className="w-3 h-3" />}
+                </div>
+                <span className={`text-xs ${isChecked ? 'line-through text-[#71717A]' : 'text-[#0E0E10] font-medium'}`}>
+                  {step}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={handleAcknowledge}
+          className="nomu-pill w-full py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+        >
+          Acknowledge &amp; Mark All Complete
+        </button>
+      </div>
+    </div>,
+    document.body
+  )}
+</div>
   );
 };
