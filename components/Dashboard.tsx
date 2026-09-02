@@ -8,8 +8,10 @@ import { AnalysisSummary, DataRow } from '../types';
 import { 
   TrendingUp, Activity, BarChart2, Lightbulb, 
   ShieldCheck, AlertCircle, ArrowUpRight, ArrowDownRight,
-  Layout as LayoutIcon, Maximize2, Filter, Share2, Download
+  Layout as LayoutIcon, Maximize2, Filter, Share2, Download,
+  FileText, SlidersHorizontal, Search, RotateCcw, Loader2
 } from 'lucide-react';
+import { exportDashboardToPDF } from '../services/pdfExportService';
 
 interface DashboardProps {
   analysis: AnalysisSummary;
@@ -28,6 +30,123 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
     percent?: number;
   } | null>(null);
   const [checkedSteps, setCheckedSteps] = React.useState<Record<string, Record<number, boolean>>>({});
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('ALL');
+  const [searchKeyword, setSearchKeyword] = React.useState<string>('');
+  const [isExportingPDF, setIsExportingPDF] = React.useState<boolean>(false);
+
+  const dimCol = analysis.metadata?.dimension_name;
+  const metricCol = analysis.metadata?.metric_name;
+  const secDimCol = analysis.metadata?.sec_dimension_name || dimCol;
+
+  // Extract unique categories for slicer dropdown
+  const availableCategories = React.useMemo(() => {
+    if (!dimCol || !data || data.length === 0) return [];
+    const set = new Set<string>();
+    data.forEach(row => {
+      if (row[dimCol] !== undefined && row[dimCol] !== null && String(row[dimCol]).trim()) {
+        set.add(String(row[dimCol]).trim());
+      }
+    });
+    return Array.from(set).slice(0, 30);
+  }, [data, dimCol]);
+
+  // Compute sliced subset of records
+  const filteredData = React.useMemo(() => {
+    if (!data || data.length === 0) return [];
+    return data.filter(row => {
+      if (selectedCategory !== 'ALL' && dimCol && String(row[dimCol]).trim() !== selectedCategory) {
+        return false;
+      }
+      if (searchKeyword.trim()) {
+        const kw = searchKeyword.toLowerCase();
+        const match = Object.values(row).some(val => String(val).toLowerCase().includes(kw));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [data, dimCol, selectedCategory, searchKeyword]);
+
+  const isFiltered = (selectedCategory !== 'ALL' || searchKeyword.trim().length > 0) && data && data.length > 0;
+
+  // Dynamic BI overview recalculation based on active slicers
+  const activeOverview = React.useMemo(() => {
+    if (!isFiltered || !metricCol || !dimCol) {
+      return analysis.biOverview;
+    }
+    const compMap: Record<string, number> = {};
+    const distMap: Record<string, number> = {};
+    filteredData.forEach(row => {
+      const mVal = Number(row[metricCol]) || 1;
+      const dVal = String(row[dimCol] ?? 'Other');
+      compMap[dVal] = (compMap[dVal] || 0) + mVal;
+      if (secDimCol) {
+        const sVal = String(row[secDimCol] ?? 'Other');
+        distMap[sVal] = (distMap[sVal] || 0) + mVal;
+      }
+    });
+    const sortedComp = Object.entries(compMap)
+      .map(([label, value]) => ({ label, value: Math.round(value * 100) / 100 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+    const sortedDist = Object.entries(distMap)
+      .map(([category, value]) => ({ category, value: Math.round(value * 100) / 100 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+    return {
+      composition: sortedComp.length > 0 ? sortedComp : analysis.biOverview.composition,
+      trend: analysis.biOverview.trend,
+      distribution: sortedDist.length > 0 ? sortedDist : analysis.biOverview.distribution
+    };
+  }, [isFiltered, filteredData, metricCol, dimCol, secDimCol, analysis.biOverview]);
+
+  // Dynamic KPIs reflecting the active slice
+  const activeKPIs = React.useMemo(() => {
+    if (!isFiltered || !metricCol) {
+      return analysis.descriptive.kpis;
+    }
+    const totalMetric = filteredData.reduce((acc, r) => acc + (Number(r[metricCol]) || 0), 0);
+    const avgMetric = filteredData.length > 0 ? totalMetric / filteredData.length : 0;
+    return [
+      {
+        label: 'Filtered Records',
+        value: `${filteredData.length.toLocaleString()}`,
+        change: `${((filteredData.length / data.length) * 100).toFixed(1)}% of total`,
+        trend: 'up' as const
+      },
+      {
+        label: `Filtered Total ${metricCol}`,
+        value: totalMetric > 1000 ? `$${totalMetric.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : totalMetric.toFixed(1),
+        change: 'Active Subset',
+        trend: 'up' as const
+      },
+      {
+        label: `Filtered Avg ${metricCol}`,
+        value: avgMetric.toFixed(1),
+        change: 'Per Item',
+        trend: 'up' as const
+      },
+      {
+        label: 'Active Slicer',
+        value: selectedCategory !== 'ALL' ? selectedCategory.slice(0, 14) : `"${searchKeyword.slice(0, 10)}"`,
+        change: 'Live Filter',
+        trend: 'up' as const
+      }
+    ];
+  }, [isFiltered, filteredData, data, metricCol, selectedCategory, searchKeyword, analysis.descriptive.kpis]);
+
+  const handleExportPDF = async () => {
+    setIsExportingPDF(true);
+    try {
+      await exportDashboardToPDF('executive-dashboard-canvas', {
+        title: 'NARRATIVE ANALYTICS ENGINE — EXECUTIVE REPORT',
+        company: 'Executive BI Platform'
+      });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
 
   const getPlanSteps = (action: string, backendPlan?: string[]) => {
     if (backendPlan && backendPlan.length > 0) return backendPlan;
@@ -162,30 +281,107 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700 bg-slate-50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-6 sm:py-12">
+    <div id="executive-dashboard-canvas" className="space-y-12 animate-in fade-in duration-700 bg-slate-50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-6 sm:py-12">
       {/* BI Command Center Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mx-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mx-2">
         <div className="flex items-center gap-4">
-          <LayoutIcon className="w-5 h-5 text-slate-400" />
-          <h2 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight uppercase">Executive BI Canvas</h2>
+          <LayoutIcon className="w-5 h-5 text-indigo-600" />
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Executive BI Canvas</h2>
+            <p className="text-xs text-slate-400">Decision-grade narrative intelligence &amp; interactive slice engine</p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 justify-end w-full sm:w-auto">
-          <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><Filter className="w-4 h-4" /></button>
-          <button className="p-2 hover:bg-slate-50 rounded-lg text-slate-400"><Share2 className="w-4 h-4" /></button>
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExportingPDF}
+            className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            title="Generate Presentation-Ready Executive PDF"
+          >
+            {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+            <span>{isExportingPDF ? 'GENERATING PDF...' : 'EXPORT EXECUTIVE PDF'}</span>
+          </button>
           <button 
             onClick={downloadCleanedCSV}
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-xs font-bold transition-all"
             title="Export the cleaned dataset used for these insights"
           >
-            <Download className="w-4 h-4" /> <span className="hidden sm:inline">EXPORT CLEAN DATA</span>
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">EXPORT CSV</span>
           </button>
-          <button onClick={onReset} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all">NEW ANALYSIS</button>
+          <button onClick={onReset} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer">NEW ANALYSIS</button>
+        </div>
+      </div>
+
+      {/* Interactive Slicer & Filter Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm mx-2 -mt-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <SlidersHorizontal className="w-4 h-4 text-indigo-600" /> Slicers:
+            </div>
+
+            {/* Category Slicer Dropdown */}
+            {availableCategories.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">{dimCol}:</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="ALL">All {dimCol}s ({availableCategories.length})</option>
+                  {availableCategories.map((cat, i) => (
+                    <option key={i} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Quick Keyword Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search records..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 w-40 sm:w-52"
+              />
+            </div>
+
+            {/* Reset Slicers */}
+            {isFiltered && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('ALL');
+                  setSearchKeyword('');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset Slicers
+              </button>
+            )}
+          </div>
+
+          {/* Slicer Status Pill */}
+          <div className="flex items-center gap-2 text-xs">
+            {isFiltered ? (
+              <span className="px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+                Active Slice: {filteredData.length.toLocaleString()} of {data.length.toLocaleString()} rows ({((filteredData.length / data.length) * 100).toFixed(1)}%)
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">
+                All {data.length.toLocaleString()} rows active in real-time canvas
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Metric Tiles Tier (Power BI Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {analysis.descriptive.kpis.map((kpi, idx) => (
+        {activeKPIs.map((kpi, idx) => (
           <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{kpi.label}</p>
             <div className="flex items-end justify-between">
@@ -262,11 +458,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                 <div className="h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart 
-                      data={analysis.biOverview.trend}
+                      data={activeOverview.trend}
                       onClick={(state) => {
                         if (state && state.activePayload && state.activePayload.length) {
                           const p = state.activePayload[0].payload;
-                          handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Momentum", p.name, p.value, analysis.biOverview.trend);
+                          handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Momentum", p.name, p.value, activeOverview.trend);
                         }
                       }}
                     >
@@ -324,7 +520,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={analysis.biOverview.composition}
+                        data={activeOverview.composition}
                         innerRadius={60}
                         outerRadius={95}
                         paddingAngle={4}
@@ -335,11 +531,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                         onClick={(data) => {
                           if (data) {
                             const p = data.payload || data;
-                            handleChartClick(isTabular ? `${metricLabel} Share by ${dimLabel}` : "Category Split", p.name || p.label, p.value, analysis.biOverview.composition);
+                            handleChartClick(isTabular ? `${metricLabel} Share by ${dimLabel}` : "Category Split", p.name || p.label, p.value, activeOverview.composition);
                           }
                         }}
                       >
-                        {analysis.biOverview.composition.map((entry, index) => {
+                        {activeOverview.composition.map((entry, index) => {
                           const isSelected = selectedElement && selectedElement.chartName.includes("Share") && selectedElement.label === entry.label;
                           const isAnySelected = selectedElement && selectedElement.chartName.includes("Share");
                           return (
@@ -375,7 +571,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
                 </div>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analysis.biOverview.distribution}>
+                    <BarChart data={activeOverview.distribution}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis 
                         dataKey="category" 

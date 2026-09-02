@@ -42,3 +42,13 @@ export interface DataQualityReport {
   score: number;
   checks: Array<{ name: string; status: 'pass' | 'warning' | 'fail'; message: string }>;
 }
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  role: 'Enterprise Administrator' | 'Executive Client' | 'Data Analyst';
+  avatar?: string;
+}
+

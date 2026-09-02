@@ -1,13 +1,28 @@
-
 import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
-import { DataRow, AnalysisSummary, DataQualityReport } from './types';
+import { AuthScreen } from './components/AuthScreen';
+import { DataSourceHub } from './components/DataSourceHub';
+import { DataRow, AnalysisSummary, DataQualityReport, UserProfile } from './types';
 import { assessDataQuality, analyzeDataset, cleanDataset } from './services/geminiService';
-import { Upload, FileText, CheckCircle, AlertTriangle, XCircle, Loader2, Sparkles, AlertCircle, Wand2, Download, Table } from 'lucide-react';
+import { 
+  FileText, CheckCircle, AlertTriangle, XCircle, Loader2, 
+  Sparkles, AlertCircle, Wand2, Download, Table, Database, RefreshCw 
+} from 'lucide-react';
 
-const App: React.FC = () => {
+export const App: React.FC = () => {
+  // Authentication State with localStorage persistence
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('narrative_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [rawData, setRawData] = useState<DataRow[] | null>(null);
+  const [dataSourceName, setDataSourceName] = useState<string>('');
   const [cleanedData, setCleanedData] = useState<DataRow[] | null>(null);
   const [cleaningReport, setCleaningReport] = useState<string[] | null>(null);
   const [qualityReport, setQualityReport] = useState<DataQualityReport | null>(null);
@@ -16,63 +31,27 @@ const App: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleLogin = (user: UserProfile) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('narrative_auth_user', JSON.stringify(user));
+    } catch {}
+  };
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const rows = text.split('\n').filter(r => r.trim());
-        if (rows.length < 2) throw new Error("File is empty or missing headers.");
-        
-        // Helper to parse a single CSV line respecting double quotes
-        const parseCSVLine = (line: string): string[] => {
-          const result: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          const cleanLine = line.replace(/\r$/, '');
-          for (let i = 0; i < cleanLine.length; i++) {
-            const char = cleanLine[i];
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-              result.push(current);
-              current = '';
-            } else {
-              current += char;
-            }
-          }
-          result.push(current);
-          return result;
-        };
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('narrative_auth_user');
+    } catch {}
+  };
 
-        const headers = parseCSVLine(rows[0]).map(h => h.trim());
-        const parsedData = rows.slice(1).map(row => {
-          const values = parseCSVLine(row);
-          const obj: any = {};
-          headers.forEach((header, i) => {
-            let val = values[i]?.trim() ?? '';
-            // Remove surrounding double quotes if present
-            if (val.startsWith('"') && val.endsWith('"')) {
-              val = val.substring(1, val.length - 1);
-            }
-            obj[header] = (val !== '' && !isNaN(Number(val))) ? Number(val) : val;
-          });
-          return obj;
-        });
-
-        setRawData(parsedData);
-        setQualityReport(assessDataQuality(parsedData));
-        setCleanedData(null);
-        setCleaningReport(null);
-        setError(null);
-      } catch (err: any) {
-        setError(err.message || "Failed to parse the file.");
-      }
-    };
-    reader.readAsText(file);
+  const handleDataLoaded = (data: DataRow[], sourceName: string) => {
+    setRawData(data);
+    setDataSourceName(sourceName);
+    setQualityReport(assessDataQuality(data));
+    setCleanedData(null);
+    setCleaningReport(null);
+    setError(null);
   };
 
   const handleCleaning = () => {
@@ -124,6 +103,7 @@ const App: React.FC = () => {
 
   const reset = () => {
     setRawData(null);
+    setDataSourceName('');
     setCleanedData(null);
     setCleaningReport(null);
     setQualityReport(null);
@@ -131,128 +111,164 @@ const App: React.FC = () => {
     setError(null);
   };
 
+  // 1. Guard: Check Authentication
+  if (!currentUser) {
+    return <AuthScreen onLogin={handleLogin} />;
+  }
+
+  // 2. Loading Screen
   if (isLoading) {
     return (
-      <Layout>
+      <Layout user={currentUser} onLogout={handleLogout}>
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 text-center animate-in fade-in zoom-in duration-500">
           <div className="relative">
-             <div className="absolute inset-0 bg-gray-100 rounded-full animate-ping opacity-20"></div>
-             <Loader2 className="w-16 h-16 text-black animate-spin relative z-10" />
+            <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping opacity-25"></div>
+            <Loader2 className="w-16 h-16 text-indigo-600 animate-spin relative z-10" />
           </div>
           <div className="space-y-3">
-            <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">{loadingStep}</h2>
-            <p className="text-gray-400 font-light max-w-xs mx-auto">This may take a few moments as we compute the full descriptive-to-prescriptive stack.</p>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{loadingStep}</h2>
+            <p className="text-slate-400 text-xs font-light max-w-sm mx-auto">
+              Connecting to Render gateway and compiling 4-tier descriptive, diagnostic, predictive, and prescriptive narrative intelligence.
+            </p>
           </div>
         </div>
       </Layout>
     );
   }
 
+  // 3. Analysis Dashboard View
   if (analysis) {
     return (
-      <Layout>
+      <Layout user={currentUser} onLogout={handleLogout}>
         <Dashboard analysis={analysis} onReset={reset} data={cleanedData || rawData || []} />
       </Layout>
     );
   }
 
+  // 4. Data Ingestion & Staging View
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto">
+    <Layout user={currentUser} onLogout={handleLogout}>
+      <div className="max-w-4xl mx-auto space-y-10">
         {!rawData ? (
-          <section className="text-center space-y-12 py-12 animate-in slide-in-from-bottom-8 duration-700">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-100 rounded-full text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                <Sparkles className="w-3 h-3" /> Research-Grade Insights
+          <section className="text-center space-y-10 py-6 animate-in slide-in-from-bottom-8 duration-700">
+            {/* Header Hero */}
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-xs font-bold tracking-wider text-indigo-700 uppercase">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Enterprise Narrative Intelligence
               </div>
-              <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 tracking-tight leading-[1.1]">
-                Automated Analytics <br/>
-                <span className="text-gray-300">Simplified Narrative</span>
+              <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+                Automated Analytics Pipeline <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600">
+                  Explainable Business Narratives
+                </span>
               </h1>
-              <p className="text-xl text-gray-500 font-light max-w-2xl mx-auto leading-relaxed px-4">
-                Upload your dataset to generate a comprehensive 4-tier analysis report. 
-                Experience explainable ML designed for human decision-making.
+              <p className="text-sm sm:text-base text-slate-500 font-light max-w-2xl mx-auto leading-relaxed px-4">
+                Connect your business datasets via local files, live Google Sheets, remote endpoints, or cloud database queries to generate automated executive intelligence reports.
               </p>
             </div>
 
-            <div className="bg-white p-12 rounded-[40px] border-2 border-dashed border-gray-100 hover:border-gray-300 transition-all group relative cursor-pointer mx-4">
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="flex flex-col items-center gap-6">
-                <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                  <Upload className="w-8 h-8 text-gray-400 group-hover:text-black" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-lg font-medium text-gray-900">Drag & drop your CSV dataset</p>
-                  <p className="text-sm text-gray-400">or click to browse local files</p>
-                </div>
-              </div>
-            </div>
+            {/* Multi-Source Ingestion Hub */}
+            <DataSourceHub onDataLoaded={handleDataLoaded} onError={setError} />
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm justify-center mx-4">
-                <XCircle className="w-4 h-4" /> {error}
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-600 text-xs justify-center mx-4">
+                <XCircle className="w-4 h-4 shrink-0" /> {error}
               </div>
             )}
           </section>
         ) : (
-          <section className="space-y-12 animate-in fade-in duration-500 px-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white sticky top-24 z-40 py-4 border-b border-gray-100">
+          <section className="space-y-10 animate-in fade-in duration-500 px-2 sm:px-4">
+            {/* Staging Command Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white sticky top-20 z-40 py-5 px-6 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-4">
-                <button onClick={reset} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <XCircle className="w-5 h-5 text-gray-400" />
+                <button onClick={reset} className="p-2 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer" title="Cancel and load another dataset">
+                  <XCircle className="w-5 h-5 text-slate-400 hover:text-slate-800" />
                 </button>
-                <h2 className="text-2xl font-semibold text-gray-900">Data Staging</h2>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Data Staging &amp; Quality Audit</h2>
+                  <p className="text-xs text-slate-400">
+                    Source: <span className="font-semibold text-indigo-600">{dataSourceName || 'Active Stream'}</span> &bull; {rawData.length.toLocaleString()} rows detected
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 {!cleanedData ? (
                   <button 
                     onClick={handleCleaning}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100 w-full sm:w-auto justify-center"
+                    className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-md shadow-indigo-100 w-full sm:w-auto justify-center cursor-pointer"
                   >
-                    Clean Dataset <Wand2 className="w-4 h-4" />
+                    Clean Dataset <Wand2 className="w-3.5 h-3.5" />
                   </button>
                 ) : (
                   <button 
                     onClick={downloadCSV}
-                    className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-100 w-full sm:w-auto justify-center"
+                    className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-md shadow-emerald-100 w-full sm:w-auto justify-center cursor-pointer"
                   >
-                    Download Clean CSV <Download className="w-4 h-4" />
+                    Download Clean CSV <Download className="w-3.5 h-3.5" />
                   </button>
                 )}
                 <button 
                   onClick={runAnalysis}
                   disabled={qualityReport?.status === 'red'}
-                  className={`px-6 py-3 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center ${
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 w-full sm:w-auto justify-center cursor-pointer ${
                     qualityReport?.status === 'red' 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-black text-white hover:bg-gray-800'
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                      : 'bg-slate-900 text-white hover:bg-slate-800'
                   }`}
                 >
-                  Generate Insights <Sparkles className="w-4 h-4" />
+                  Generate Insights <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm">
-                <AlertCircle className="w-4 h-4" /> {error}
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-rose-600 text-xs">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {error}
               </div>
             )}
 
+            {/* Quality Report Audit */}
+            {qualityReport && (
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                    Automated Ingestion Quality Score
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    qualityReport.status === 'green' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                    qualityReport.status === 'yellow' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                    'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    Score: {qualityReport.score}/100 &bull; {qualityReport.status.toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {qualityReport.checks.map((check, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">{check.name}</span>
+                        {check.status === 'pass' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> :
+                         check.status === 'warning' ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                         <XCircle className="w-4 h-4 text-rose-500" />}
+                      </div>
+                      <p className="text-xs text-slate-500 font-light">{check.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cleaning Transformation Audit */}
             {cleaningReport && (
-              <div className="bg-white border border-indigo-100 rounded-3xl p-8 space-y-4 shadow-sm animate-in slide-in-from-top-4 duration-500">
+              <div className="bg-white border border-indigo-100 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm animate-in slide-in-from-top-4 duration-500">
                 <div className="flex items-center gap-2 text-indigo-600 font-bold uppercase tracking-widest text-[10px]">
-                  <Wand2 className="w-3 h-3" /> Cleaning Transformation Report
+                  <Wand2 className="w-3.5 h-3.5" /> Pipeline Imputation &amp; Normalization Report
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {cleaningReport.map((line, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-50 text-sm text-indigo-900 font-medium">
-                      <CheckCircle className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-indigo-950 font-medium">
+                      <CheckCircle className="w-4 h-4 text-indigo-500 shrink-0" />
                       {line}
                     </div>
                   ))}
@@ -260,41 +276,32 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {qualityReport?.checks.map((check, idx) => (
-                <div key={idx} className="p-8 bg-white border border-gray-100 rounded-3xl shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{check.name}</h3>
-                    {check.status === 'pass' && <CheckCircle className="w-5 h-5 text-green-500" />}
-                    {check.status === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
-                    {check.status === 'fail' && <XCircle className="w-5 h-5 text-red-500" />}
-                  </div>
-                  <p className="text-sm text-gray-500 font-light leading-relaxed">{check.message}</p>
+            {/* Preview of Ingested Records */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  <Table className="w-4 h-4 text-slate-400" /> Dataset Feature Schema
                 </div>
-              ))}
-            </div>
-
-            <div className="bg-white border border-gray-100 rounded-[32px] overflow-hidden soft-shadow">
-              <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-500 flex items-center gap-2">
-                  <Table className="w-4 h-4" /> {cleanedData ? 'Cleaned' : 'Raw'} Data Preview (First 5 Rows)
-                </h3>
-                <span className="text-xs text-gray-400">{(cleanedData || rawData || []).length} rows detected</span>
+                <span className="text-xs text-slate-400 font-medium">
+                  Showing top 5 of {rawData.length.toLocaleString()} rows
+                </span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
                     <tr>
-                      {Object.keys((cleanedData || rawData)?.[0] || {}).map((h) => (
-                        <th key={h} className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white border-b border-gray-50">{h}</th>
+                      {Object.keys(rawData[0] || {}).slice(0, 7).map((col, i) => (
+                        <th key={i} className="px-4 py-3">{col}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
-                    {(cleanedData || rawData)?.slice(0, 5).map((row, i) => (
-                      <tr key={i} className="hover:bg-gray-50 transition-colors">
-                        {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-6 py-4 text-sm text-gray-600 border-b border-gray-50">{String(v)}</td>
+                  <tbody className="divide-y divide-slate-100">
+                    {rawData.slice(0, 5).map((row, rIdx) => (
+                      <tr key={rIdx} className="hover:bg-slate-50/80 transition-colors">
+                        {Object.values(row).slice(0, 7).map((val: any, cIdx) => (
+                          <td key={cIdx} className="px-4 py-2.5 font-mono text-[11px] text-slate-600 truncate max-w-[150px]">
+                            {val !== null && val !== undefined ? String(val) : '—'}
+                          </td>
                         ))}
                       </tr>
                     ))}
