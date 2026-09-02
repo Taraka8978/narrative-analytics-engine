@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { Logo } from './Logo';
+import { FooterModals, FooterModalTab } from './FooterModals';
 import { LogOut, ArrowUpRight, ShieldCheck, Sparkles, CheckCircle2, Clock } from 'lucide-react';
 
 interface LayoutProps {
@@ -20,12 +21,14 @@ export const Layout: React.FC<LayoutProps> = ({
   onOpenHistory,
   historyCount = 0
 }) => {
+  const [activeFooterTab, setActiveFooterTab] = useState<FooterModalTab>(null);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF9F6] text-[#0E0E10] font-sans antialiased selection:bg-[#FF7448] selection:text-white">
       {/* Floating Pill Navigation Bar (Nomu-style) */}
       <div className="sticky top-4 z-50 w-full max-w-6xl mx-auto px-4 sm:px-6">
         <header className="flex items-center justify-between gap-4 rounded-full bg-white/80 backdrop-blur-xl border border-black/[0.06] pl-5 pr-4 py-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.1)] text-[#0E0E10] transition-all">
-          {/* Custom Brand Logo */}
+          {/* Custom Brand Logo with Full Name */}
           <div className="flex items-center gap-3">
             <a href="#" className="flex items-center group">
               <Logo size="sm" showWordmark={true} />
@@ -61,7 +64,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className="flex items-center gap-2">
             {user ? (
               <div className="flex items-center gap-2">
-                {/* User-Specific Analysis History / Audit Logs Button */}
+                {/* User-Specific Analysis History Button */}
                 {onOpenHistory && (
                   <button
                     onClick={onOpenHistory}
@@ -116,20 +119,45 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[#71717A]">
           <div className="flex items-center gap-3">
             <Logo size="sm" showWordmark={true} />
-            <span>&bull;</span>
-            <span>Data into explainable decision intelligence in 5 minutes.</span>
+            <span className="hidden sm:inline">&bull;</span>
+            <span className="hidden sm:inline">Data into explainable decision intelligence in 5 minutes.</span>
           </div>
 
-          <div className="flex items-center gap-6 font-medium">
+          <div className="flex flex-wrap items-center gap-5 font-medium">
             <span className="inline-flex items-center gap-1.5 text-[#0E0E10]">
               <span className="w-2 h-2 rounded-full bg-emerald-500" /> API Gateway Active
             </span>
-            <a href="#" className="hover:text-[#0E0E10] transition-colors">Documentation</a>
-            <a href="#" className="hover:text-[#0E0E10] transition-colors">Compliance</a>
-            <a href="#" className="hover:text-[#0E0E10] transition-colors">Privacy</a>
+            <button 
+              type="button"
+              onClick={() => setActiveFooterTab('documentation')}
+              className="hover:text-[#0E0E10] transition-colors cursor-pointer"
+            >
+              Documentation
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveFooterTab('compliance')}
+              className="hover:text-[#0E0E10] transition-colors cursor-pointer"
+            >
+              Compliance
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveFooterTab('privacy')}
+              className="hover:text-[#0E0E10] transition-colors cursor-pointer"
+            >
+              Privacy
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* Interactive Footer Modals (Documentation / Compliance / Privacy) */}
+      <FooterModals 
+        activeTab={activeFooterTab} 
+        onClose={() => setActiveFooterTab(null)} 
+        onSelectTab={setActiveFooterTab} 
+      />
     </div>
   );
 };

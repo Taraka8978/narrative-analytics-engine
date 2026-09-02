@@ -18,7 +18,7 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   const textSizes = {
-    sm: 'text-sm',
+    sm: 'text-sm sm:text-base',
     md: 'text-base sm:text-lg',
     lg: 'text-xl sm:text-2xl'
   };
@@ -62,10 +62,12 @@ export const Logo: React.FC<LogoProps> = ({
         </svg>
       </div>
 
-      {/* Artisanal Typographic Wordmark */}
+      {/* Full Brand Wordmark */}
       {showWordmark && (
-        <span className={`font-black tracking-tight text-[#0E0E10] leading-none ${textSizes[size]}`}>
-          narrative<span className="text-[#FF7448]">.</span>
+        <span className={`font-black tracking-tight text-[#0E0E10] leading-tight ${textSizes[size]}`}>
+          <span className="hidden sm:inline">Narrative Analytics Engine</span>
+          <span className="sm:hidden">Narrative Analytics</span>
+          <span className="text-[#FF7448]">.</span>
         </span>
       )}
     </div>
