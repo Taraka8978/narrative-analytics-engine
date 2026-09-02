@@ -11,6 +11,7 @@ interface LayoutProps {
   currentStep?: 'connect' | 'staging' | 'dashboard';
   onOpenHistory?: () => void;
   historyCount?: number;
+  onOpenAuth?: () => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ 
@@ -19,7 +20,8 @@ export const Layout: React.FC<LayoutProps> = ({
   onLogout,
   currentStep = 'connect',
   onOpenHistory,
-  historyCount = 0
+  historyCount = 0,
+  onOpenAuth
 }) => {
   const [activeFooterTab, setActiveFooterTab] = useState<FooterModalTab>(null);
 
@@ -100,9 +102,16 @@ export const Layout: React.FC<LayoutProps> = ({
                 )}
               </div>
             ) : (
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FAF4ED] text-[#0E0E10] text-xs font-medium">
-                <span className="w-2 h-2 rounded-full bg-[#FF7448] animate-pulse" />
-                <span>Verified Portal</span>
+              <div className="flex items-center gap-2">
+                {onOpenAuth && (
+                  <button
+                    onClick={onOpenAuth}
+                    className="nomu-pill flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>Sign In</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             )}
           </div>

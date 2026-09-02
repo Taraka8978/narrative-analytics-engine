@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
-import { AuthScreen } from './components/AuthScreen';
+import { AuthModal } from './components/AuthModal';
+import { HeroLanding } from './components/HeroLanding';
 import { DataSourceHub } from './components/DataSourceHub';
 import { AnalysisHistoryModal } from './components/AnalysisHistoryModal';
 import { DataRow, AnalysisSummary, DataQualityReport, UserProfile, AnalysisLogEntry } from './types';
 import { assessDataQuality, analyzeDataset, cleanDataset } from './services/geminiService';
 import { 
   CheckCircle2, AlertCircle, Wand2, Download, Table, 
-  Sparkles, ArrowRight, X, Loader2, Clock 
+  Sparkles, ArrowRight, X, Loader2, Clock, ArrowUpRight 
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -30,6 +31,9 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Authentication Modal State (Non-blocking)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // User-Specific Analysis Activity Logs
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -54,6 +58,30 @@ export const App: React.FC = () => {
     try {
       localStorage.setItem('narrative_auth_user', JSON.stringify(user));
     } catch {}
+
+    // If there is an active analysis, automatically associate it with the newly logged in user
+    if (analysis && rawData) {
+      const pendingLog: AnalysisLogEntry = {
+        id: `log_${Date.now()}`,
+        userId: user.id,
+        datasetName: dataSourceName || 'Curated Dataset',
+        timestamp: new Date().toISOString(),
+        rowCount: (cleanedData || rawData).length,
+        qualityScore: qualityReport?.score || 95,
+        metricName: analysis.metadata?.metric_name || 'Metric',
+        summaryPreview: analysis.descriptive?.narrative?.slice(0, 160) || 'Analysis complete.',
+        analysis: analysis,
+        cleanedData: cleanedData || rawData
+      };
+
+      try {
+        const stored = localStorage.getItem(`narrative_logs_${user.id}`);
+        const existing = stored ? JSON.parse(stored) : [];
+        const updated = [pendingLog, ...existing].slice(0, 30);
+        localStorage.setItem(`narrative_logs_${user.id}`, JSON.stringify(updated));
+        setUserLogs(updated);
+      } catch {}
+    }
   };
 
   const handleLogout = () => {
@@ -112,7 +140,7 @@ export const App: React.FC = () => {
       setAnalysis(results);
       setError(null);
 
-      // Automatically log this analysis run for the specific active user
+      // If user is authenticated, save directly to their profile history
       if (currentUser) {
         const newLog: AnalysisLogEntry = {
           id: `log_${Date.now()}`,
@@ -179,12 +207,7 @@ export const App: React.FC = () => {
     setError(null);
   };
 
-  // 1. Guard: Check Authentication
-  if (!currentUser) {
-    return <AuthScreen onLogin={handleLogin} />;
-  }
-
-  // 2. Loading Screen (Nomu-style)
+  // 1. Loading Screen (Nomu-style)
   if (isLoading) {
     return (
       <Layout 
@@ -193,6 +216,7 @@ export const App: React.FC = () => {
         currentStep="staging"
         onOpenHistory={() => setIsHistoryOpen(true)}
         historyCount={userLogs.length}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       >
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center animate-nomu-fade">
           <div className="relative">
@@ -211,7 +235,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // 3. Analysis Dashboard View
+  // 2. Analysis Dashboard View
   if (analysis) {
     return (
       <Layout 
@@ -220,6 +244,7 @@ export const App: React.FC = () => {
         currentStep="dashboard"
         onOpenHistory={() => setIsHistoryOpen(true)}
         historyCount={userLogs.length}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       >
         <Dashboard analysis={analysis} onReset={reset} data={cleanedData || rawData || []} />
         
@@ -231,13 +256,20 @@ export const App: React.FC = () => {
           onSelectLog={handleSelectLog}
           onDeleteLog={handleDeleteLog}
           onClearAll={handleClearAllLogs}
-          userName={currentUser.name}
+          userName={currentUser?.name || 'Guest User'}
+        />
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLogin={handleLogin}
         />
       </Layout>
     );
   }
 
-  // 4. Data Ingestion & Staging View
+  // 3. Homepage & Data Staging View (Loaded directly for all users)
   return (
     <Layout 
       user={currentUser} 
@@ -245,35 +277,64 @@ export const App: React.FC = () => {
       currentStep={rawData ? 'staging' : 'connect'}
       onOpenHistory={() => setIsHistoryOpen(true)}
       historyCount={userLogs.length}
+      onOpenAuth={() => setIsAuthModalOpen(true)}
     >
-      <div className="w-full space-y-10 animate-nomu-fade">
+      <div className="w-full space-y-12 animate-nomu-fade">
         {!rawData ? (
-          <section className="text-center space-y-8 py-4">
-            {/* Header Hero */}
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-black/[0.06] rounded-full text-xs font-bold text-[#0E0E10] shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-[#FF7448]" />
-                Automated Decision Suite
+          <div className="space-y-12">
+            {/* Nomu-Style Hero Section */}
+            <HeroLanding
+              onOpenAuth={() => setIsAuthModalOpen(true)}
+              onExploreDemo={() => {
+                document.getElementById('ingestion-hub')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              isAuthenticated={!!currentUser}
+            />
+
+            {/* Ingestion Hub Centerpiece */}
+            <div id="ingestion-hub" className="scroll-mt-24 space-y-6 pt-4">
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#0E0E10] tracking-tight">
+                  Connect or Pick a Sample Dataset
+                </h3>
+                <p className="text-xs text-[#71717A]">
+                  Upload CSV, paste Google Sheet, connect database, or try one-click curated corporate samples.
+                </p>
               </div>
-              <h1 className="text-4xl sm:text-6xl font-black text-[#0E0E10] tracking-tight leading-[1.1]">
-                Your data into decisions <br/>
-                <span className="text-[#FF7448]">in 5 minutes.</span>
-              </h1>
-              <p className="text-sm sm:text-base text-[#71717A] max-w-xl mx-auto font-normal leading-relaxed">
-                Connect your business files, Google Sheets, or cloud databases. 
-                Our pipeline cleans the dataset and synthesizes executive narrative reports automatically.
-              </p>
+
+              <DataSourceHub onDataLoaded={handleDataLoaded} onError={setError} />
+
+              {error && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-rose-700 text-xs justify-center max-w-md mx-auto">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+                </div>
+              )}
             </div>
 
-            {/* Ingestion Hub */}
-            <DataSourceHub onDataLoaded={handleDataLoaded} onError={setError} />
-
-            {error && (
-              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-rose-700 text-xs justify-center max-w-md mx-auto">
-                <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+            {/* Editorial Secondary Banner (Nomu Screenshot 3) */}
+            <section className="mt-20 text-center space-y-6 py-12 border-t border-black/[0.06]">
+              <h3 className="text-3xl sm:text-5xl font-black text-[#0E0E10] tracking-tight leading-tight">
+                <span className="relative inline-block px-3 py-0.5">
+                  <span className="relative z-10">Grow your margins,</span>
+                  <span className="absolute inset-0 -skew-y-1 border-2 border-[#FF7448] rounded-full scale-105 pointer-events-none opacity-85" />
+                </span>
+                {" "}not your spreadsheets<span className="text-[#FF7448]">.</span>
+              </h3>
+              <p className="text-xs sm:text-sm text-[#71717A] max-w-xl mx-auto leading-relaxed">
+                The first AI decision platform that replaces the manual maze of spreadsheet formulas, disparate BI dashboards, and slide generation with explainable 4-tier analytics.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    document.getElementById('ingestion-hub')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="nomu-pill px-8 py-3.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer"
+                >
+                  Try Interactive Demo <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-            )}
-          </section>
+            </section>
+          </div>
         ) : (
           <section className="space-y-8">
             {/* Staging Floating Action Bar */}
@@ -421,7 +482,14 @@ export const App: React.FC = () => {
           onSelectLog={handleSelectLog}
           onDeleteLog={handleDeleteLog}
           onClearAll={handleClearAllLogs}
-          userName={currentUser.name}
+          userName={currentUser?.name || 'Guest User'}
+        />
+
+        {/* Non-Blocking Auth Modal */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLogin={handleLogin}
         />
       </div>
     </Layout>
