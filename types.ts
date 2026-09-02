@@ -52,3 +52,17 @@ export interface UserProfile {
   avatar?: string;
 }
 
+export interface AnalysisLogEntry {
+  id: string;
+  userId: string;
+  datasetName: string;
+  timestamp: string;
+  rowCount: number;
+  qualityScore: number;
+  metricName?: string;
+  summaryPreview: string;
+  analysis: AnalysisSummary;
+  cleanedData?: DataRow[];
+}
+
+

@@ -11,6 +11,7 @@ import {
   FileText, SlidersHorizontal, Search, RotateCcw, Loader2, Check
 } from 'lucide-react';
 import { exportDashboardToPDF } from '../services/pdfExportService';
+import { Logo } from './Logo';
 
 interface DashboardProps {
   analysis: AnalysisSummary;
@@ -272,13 +273,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
     <div id="executive-dashboard-canvas" className="space-y-8 animate-nomu-fade bg-[#FFF9F6]">
       {/* BI Command Center Header (Nomu Floating Bar) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.06)]">
-        <div>
-          <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#FF7448] uppercase tracking-wider mb-1">
-            <span className="w-2 h-2 rounded-full bg-[#FF7448]" /> Executive Intelligence Canvas
+        <div className="flex items-center gap-3">
+          <Logo size="md" showWordmark={true} />
+          <div className="hidden sm:block h-6 w-px bg-black/[0.08]" />
+          <div className="hidden sm:block text-xs font-bold text-[#71717A] uppercase tracking-wider">
+            Decision Report
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#0E0E10] tracking-tight">
-            narrative<span className="text-[#FF7448]">.</span> decision report
-          </h2>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

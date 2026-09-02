@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
+import { Logo } from './Logo';
 import { ArrowRight, Lock, Sparkles, CheckCircle2, User, Building, Mail, Key } from 'lucide-react';
 
 interface AuthScreenProps {
@@ -131,12 +132,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       <div className="pt-4 px-4 sm:px-6 w-full max-w-6xl mx-auto">
         <div className="flex items-center justify-between rounded-full bg-white/80 backdrop-blur-xl border border-black/[0.06] px-6 py-3.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.08)]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#0E0E10] text-white flex items-center justify-center text-xs font-black tracking-tight">
-              N
-            </div>
-            <span className="font-bold text-base tracking-tight">
-              narrative<span className="text-[#FF7448]">.</span>
-            </span>
+            <Logo size="sm" showWordmark={true} />
           </div>
 
           <div className="flex items-center gap-2 text-xs font-medium text-[#71717A]">

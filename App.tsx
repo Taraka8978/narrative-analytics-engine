@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { AuthScreen } from './components/AuthScreen';
 import { DataSourceHub } from './components/DataSourceHub';
-import { DataRow, AnalysisSummary, DataQualityReport, UserProfile } from './types';
+import { AnalysisHistoryModal } from './components/AnalysisHistoryModal';
+import { DataRow, AnalysisSummary, DataQualityReport, UserProfile, AnalysisLogEntry } from './types';
 import { assessDataQuality, analyzeDataset, cleanDataset } from './services/geminiService';
 import { 
   CheckCircle2, AlertCircle, Wand2, Download, Table, 
-  Sparkles, ArrowRight, X, Loader2, ArrowUpRight 
+  Sparkles, ArrowRight, X, Loader2, Clock 
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -29,6 +30,24 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // User-Specific Analysis Activity Logs
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [userLogs, setUserLogs] = useState<AnalysisLogEntry[]>([]);
+
+  // Load user logs on auth change
+  useEffect(() => {
+    if (currentUser) {
+      try {
+        const stored = localStorage.getItem(`narrative_logs_${currentUser.id}`);
+        setUserLogs(stored ? JSON.parse(stored) : []);
+      } catch {
+        setUserLogs([]);
+      }
+    } else {
+      setUserLogs([]);
+    }
+  }, [currentUser]);
 
   const handleLogin = (user: UserProfile) => {
     setCurrentUser(user);
@@ -92,12 +111,62 @@ export const App: React.FC = () => {
       const results = await analyzeDataset(targetData);
       setAnalysis(results);
       setError(null);
+
+      // Automatically log this analysis run for the specific active user
+      if (currentUser) {
+        const newLog: AnalysisLogEntry = {
+          id: `log_${Date.now()}`,
+          userId: currentUser.id,
+          datasetName: dataSourceName || 'Curated Dataset',
+          timestamp: new Date().toISOString(),
+          rowCount: targetData.length,
+          qualityScore: qualityReport?.score || 95,
+          metricName: results.metadata?.metric_name || 'Metric',
+          summaryPreview: results.descriptive?.narrative?.slice(0, 160) || '4-tier narrative analysis complete.',
+          analysis: results,
+          cleanedData: targetData
+        };
+
+        setUserLogs(prev => {
+          const updated = [newLog, ...prev.filter(l => l.id !== newLog.id)].slice(0, 30);
+          try {
+            localStorage.setItem(`narrative_logs_${currentUser.id}`, JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      }
     } catch (err: any) {
       setError(`Synthesis Error: ${err.message || "Unknown error"}`);
     } finally {
       setIsLoading(false);
       setLoadingStep('');
     }
+  };
+
+  const handleSelectLog = (log: AnalysisLogEntry) => {
+    setAnalysis(log.analysis);
+    setCleanedData(log.cleanedData || null);
+    setDataSourceName(log.datasetName);
+    setIsHistoryOpen(false);
+  };
+
+  const handleDeleteLog = (id: string) => {
+    if (!currentUser) return;
+    setUserLogs(prev => {
+      const updated = prev.filter(l => l.id !== id);
+      try {
+        localStorage.setItem(`narrative_logs_${currentUser.id}`, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleClearAllLogs = () => {
+    if (!currentUser) return;
+    setUserLogs([]);
+    try {
+      localStorage.removeItem(`narrative_logs_${currentUser.id}`);
+    } catch {}
   };
 
   const reset = () => {
@@ -118,7 +187,13 @@ export const App: React.FC = () => {
   // 2. Loading Screen (Nomu-style)
   if (isLoading) {
     return (
-      <Layout user={currentUser} onLogout={handleLogout} currentStep="staging">
+      <Layout 
+        user={currentUser} 
+        onLogout={handleLogout} 
+        currentStep="staging"
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        historyCount={userLogs.length}
+      >
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center animate-nomu-fade">
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-[#FFF0EB] flex items-center justify-center">
@@ -139,15 +214,38 @@ export const App: React.FC = () => {
   // 3. Analysis Dashboard View
   if (analysis) {
     return (
-      <Layout user={currentUser} onLogout={handleLogout} currentStep="dashboard">
+      <Layout 
+        user={currentUser} 
+        onLogout={handleLogout} 
+        currentStep="dashboard"
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        historyCount={userLogs.length}
+      >
         <Dashboard analysis={analysis} onReset={reset} data={cleanedData || rawData || []} />
+        
+        {/* History Modal */}
+        <AnalysisHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          logs={userLogs}
+          onSelectLog={handleSelectLog}
+          onDeleteLog={handleDeleteLog}
+          onClearAll={handleClearAllLogs}
+          userName={currentUser.name}
+        />
       </Layout>
     );
   }
 
   // 4. Data Ingestion & Staging View
   return (
-    <Layout user={currentUser} onLogout={handleLogout} currentStep={rawData ? 'staging' : 'connect'}>
+    <Layout 
+      user={currentUser} 
+      onLogout={handleLogout} 
+      currentStep={rawData ? 'staging' : 'connect'}
+      onOpenHistory={() => setIsHistoryOpen(true)}
+      historyCount={userLogs.length}
+    >
       <div className="w-full space-y-10 animate-nomu-fade">
         {!rawData ? (
           <section className="text-center space-y-8 py-4">
@@ -314,6 +412,17 @@ export const App: React.FC = () => {
             </div>
           </section>
         )}
+
+        {/* Global History Modal */}
+        <AnalysisHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          logs={userLogs}
+          onSelectLog={handleSelectLog}
+          onDeleteLog={handleDeleteLog}
+          onClearAll={handleClearAllLogs}
+          userName={currentUser.name}
+        />
       </div>
     </Layout>
   );
