@@ -1,21 +1,12 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { ShieldCheck, Lock, Mail, Building, User, ArrowRight, Sparkles, Key, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Lock, Sparkles, CheckCircle2, User, Building, Mail, Key } from 'lucide-react';
 
 interface AuthScreenProps {
   onLogin: (user: UserProfile) => void;
 }
 
 const DEFAULT_USERS: Array<UserProfile & { password: string }> = [
-  {
-    id: 'usr_admin',
-    name: 'Sarah Chen',
-    email: 'admin@enterprise.com',
-    company: 'Apex Global Capital',
-    role: 'Enterprise Administrator',
-    password: 'admin123',
-    avatar: 'SC'
-  },
   {
     id: 'usr_client',
     name: 'Marcus Vance',
@@ -24,6 +15,15 @@ const DEFAULT_USERS: Array<UserProfile & { password: string }> = [
     role: 'Executive Client',
     password: 'client123',
     avatar: 'MV'
+  },
+  {
+    id: 'usr_admin',
+    name: 'Sarah Chen',
+    email: 'admin@enterprise.com',
+    company: 'Apex Global Capital',
+    role: 'Enterprise Administrator',
+    password: 'admin123',
+    avatar: 'SC'
   }
 ];
 
@@ -36,7 +36,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load custom registered users
   const getUsers = (): Array<UserProfile & { password: string }> => {
     try {
       const stored = localStorage.getItem('narrative_users');
@@ -44,7 +43,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return [...DEFAULT_USERS, ...JSON.parse(stored)];
       }
     } catch {
-      // ignore
+      // fallback
     }
     return DEFAULT_USERS;
   };
@@ -57,12 +56,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     const found = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
 
     if (!found) {
-      setError('Client account not found. Please register or use a Demo Profile.');
+      setError('No business account found for this email. Please register or use a Demo profile.');
       return;
     }
 
     if (found.password !== password) {
-      setError('Invalid password. Check credentials and retry.');
+      setError('Invalid password. Please check your credentials.');
       return;
     }
 
@@ -75,18 +74,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     setError(null);
 
     if (!name.trim() || !company.trim() || !email.trim() || !password.trim()) {
-      setError('All corporate registration fields are required.');
+      setError('Please fill in all corporate registration fields.');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters for security compliance.');
+      setError('Password must be at least 6 characters for compliance.');
       return;
     }
 
     const users = getUsers();
     if (users.some(u => u.email.toLowerCase() === email.trim().toLowerCase())) {
-      setError('An enterprise account with this email address already exists.');
+      setError('An enterprise account with this email already exists.');
       return;
     }
 
@@ -109,7 +108,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       // fallback
     }
 
-    setSuccessMsg('Account registered successfully! You can now log in.');
+    setSuccessMsg('Account registered! You can now log in.');
     setIsRegistering(false);
     setPassword('');
   };
@@ -127,198 +126,176 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden font-sans select-none">
-      {/* Background glow effects */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-indigo-600/10 blur-[130px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[350px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-      {/* Top corporate navigation bar */}
-      <header className="border-b border-slate-800/80 backdrop-blur-md px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 font-black text-white text-sm">
-            NA
+    <div className="min-h-screen flex flex-col justify-between bg-[#FFF9F6] text-[#0E0E10] font-sans antialiased selection:bg-[#FF7448] selection:text-white relative overflow-hidden">
+      {/* Floating Pill Top Bar */}
+      <div className="pt-4 px-4 sm:px-6 w-full max-w-6xl mx-auto">
+        <div className="flex items-center justify-between rounded-full bg-white/80 backdrop-blur-xl border border-black/[0.06] px-6 py-3.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[#0E0E10] text-white flex items-center justify-center text-xs font-black tracking-tight">
+              N
+            </div>
+            <span className="font-bold text-base tracking-tight">
+              narrative<span className="text-[#FF7448]">.</span>
+            </span>
           </div>
-          <div>
-            <span className="font-bold text-base tracking-tight text-white flex items-center gap-2">
-              Narrative Analytics <span className="text-indigo-400 font-light text-xs uppercase px-2 py-0.5 rounded bg-indigo-950 border border-indigo-800/60">Enterprise</span>
+
+          <div className="flex items-center gap-2 text-xs font-medium text-[#71717A]">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF4ED] text-[#0E0E10]">
+              <span className="w-2 h-2 rounded-full bg-[#FF7448]" /> Verified Client Access
             </span>
           </div>
         </div>
+      </div>
 
-        <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400">
-          <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-            <ShieldCheck className="w-4 h-4" /> 256-Bit TLS Secured
-          </span>
-          <span className="text-slate-700">|</span>
-          <span>Access Restricted to Verified Clients</span>
-        </div>
-      </header>
-
-      {/* Main Authentication Card */}
-      <main className="flex-1 flex items-center justify-center p-6 z-10">
-        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800/90 rounded-[28px] p-8 sm:p-10 shadow-2xl shadow-black/80 backdrop-blur-xl relative">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-950/60 border border-indigo-800/40 rounded-full text-indigo-300 text-[11px] font-semibold uppercase tracking-wider mb-4">
-              <Lock className="w-3 h-3" /> Client Authentication Gateway
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {isRegistering ? 'Register Client Portal' : 'Business Client Sign In'}
-            </h2>
-            <p className="text-xs text-slate-400 mt-2 font-normal leading-relaxed">
+      {/* Main Authentication Centerpiece */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md space-y-6">
+          {/* Header Typography */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#0E0E10] leading-tight">
+              {isRegistering ? 'Register Client Portal' : 'Sign in to your portal'}
+            </h1>
+            <p className="text-sm text-[#71717A] font-normal leading-relaxed max-w-sm mx-auto">
               {isRegistering
-                ? 'Create a secure enterprise workspace for your organization.'
-                : 'Enter corporate credentials to access the 4-tier decision support engine.'}
+                ? 'Create a secure workspace to analyze datasets and generate executive presentations.'
+                : 'Turn your raw datasets into decision-grade intelligence in 5 minutes.'}
             </p>
           </div>
 
-          {/* Alert Message */}
-          {error && (
-            <div className="mb-6 p-3.5 bg-rose-950/50 border border-rose-800/60 rounded-xl text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-              <span className="font-bold">Error:</span> {error}
-            </div>
-          )}
+          {/* Card */}
+          <div className="bg-white rounded-[32px] border border-black/[0.06] p-8 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.06)] relative">
+            {error && (
+              <div className="mb-6 p-3.5 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-xs font-medium flex items-start gap-2">
+                <span className="font-bold">Notice:</span> {error}
+              </div>
+            )}
 
-          {successMsg && (
-            <div className="mb-6 p-3.5 bg-emerald-950/50 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs flex items-center gap-2.5 animate-in fade-in duration-200">
-              <CheckCircle2 className="w-4 h-4 shrink-0" /> {successMsg}
-            </div>
-          )}
+            {successMsg && (
+              <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-800 text-xs font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> {successMsg}
+              </div>
+            )}
 
-          {/* Form */}
-          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
-            {isRegistering && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+              {isRegistering && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider mb-1.5">
+                      Full Name
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Sarah Jenkins"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                    Organization / Company Name
-                  </label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div>
+                    <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider mb-1.5">
+                      Company / Organization
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Apex Global Corp"
                       value={company}
                       onChange={e => setCompany(e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                     />
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Corporate Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <div>
+                <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider mb-1.5">
+                  Corporate Email
+                </label>
                 <input
                   type="email"
                   required
                   placeholder="name@company.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Password
-              </label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <div>
+                <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                 />
               </div>
+
+              <button
+                type="submit"
+                className="w-full mt-3 py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-sm font-bold transition-all shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isRegistering ? 'Create Client Account' : 'Access Workspace'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-black/[0.06] text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering);
+                  setError(null);
+                  setSuccessMsg(null);
+                }}
+                className="text-xs text-[#71717A] hover:text-[#0E0E10] font-semibold transition-colors cursor-pointer"
+              >
+                {isRegistering
+                  ? '← Already have credentials? Sign in'
+                  : 'New client? Register business account →'}
+              </button>
             </div>
 
-            <button
-              type="submit"
-              className="w-full mt-2 py-3.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isRegistering ? 'Complete Corporate Registration' : 'Authenticate & Open Workspace'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+            {/* Tactile Demo Chips */}
+            {!isRegistering && (
+              <div className="mt-6 pt-5 border-t border-black/[0.06] space-y-2.5">
+                <p className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider text-center">
+                  Instant Demo Profiles:
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => loginWithDemo('client@business.com', 'client123')}
+                    className="p-3 rounded-2xl bg-[#FAF4ED] hover:bg-[#F2ECE3] border border-black/[0.04] text-left transition-all cursor-pointer group"
+                  >
+                    <p className="text-xs font-bold text-[#0E0E10] group-hover:text-[#FF7448] transition-colors">Client Demo</p>
+                    <p className="text-[10px] text-[#71717A] truncate">client@business.com</p>
+                  </button>
 
-          {/* Toggle between Register and Sign In */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 text-center">
-            <button
-              onClick={() => {
-                setIsRegistering(!isRegistering);
-                setError(null);
-                setSuccessMsg(null);
-              }}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors cursor-pointer"
-            >
-              {isRegistering
-                ? '← Already have corporate credentials? Sign In'
-                : 'Need client access? Register new business account →'}
-            </button>
-          </div>
-
-          {/* Quick Demo Credentials Panel */}
-          {!isRegistering && (
-            <div className="mt-6 pt-5 border-t border-slate-800/60">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3 text-center flex items-center justify-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-cyan-400" /> One-Click Demo Access
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => loginWithDemo('admin@enterprise.com', 'admin123')}
-                  className="px-3 py-2 bg-slate-950/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-left transition-all group cursor-pointer"
-                >
-                  <p className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">Admin Demo</p>
-                  <p className="text-[10px] text-slate-400 truncate">admin@enterprise.com</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => loginWithDemo('client@business.com', 'client123')}
-                  className="px-3 py-2 bg-slate-950/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-left transition-all group cursor-pointer"
-                >
-                  <p className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">Client Demo</p>
-                  <p className="text-[10px] text-slate-400 truncate">client@business.com</p>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => loginWithDemo('admin@enterprise.com', 'admin123')}
+                    className="p-3 rounded-2xl bg-[#FAF4ED] hover:bg-[#F2ECE3] border border-black/[0.04] text-left transition-all cursor-pointer group"
+                  >
+                    <p className="text-xs font-bold text-[#0E0E10] group-hover:text-[#FF7448] transition-colors">Admin Demo</p>
+                    <p className="text-[10px] text-[#71717A] truncate">admin@enterprise.com</p>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 
-      {/* Footer security guarantee */}
-      <footer className="py-4 border-t border-slate-900 text-center text-slate-400 text-xs z-10">
-        <p>
-          &copy; 2026 Narrative Analytics Inc. &bull; Compliant with SOC-2, HIPAA &amp; GDPR Enterprise Standards.
-        </p>
+      {/* Footer */}
+      <footer className="py-6 text-center text-xs text-[#71717A]">
+        &copy; 2026 narrative. decision suite &bull; Enterprise SOC-2 &amp; GDPR Compliant
       </footer>
     </div>
   );

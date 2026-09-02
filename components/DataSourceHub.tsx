@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DataRow } from '../types';
 import { 
   Upload, FileSpreadsheet, Globe, Database, Sparkles, 
-  ArrowRight, CheckCircle2, AlertCircle, Loader2, RefreshCw, ExternalLink 
+  ArrowRight, CheckCircle2, AlertCircle, Loader2, ArrowUpRight 
 } from 'lucide-react';
 
 interface DataSourceHubProps {
@@ -10,7 +10,6 @@ interface DataSourceHubProps {
   onError: (error: string) => void;
 }
 
-// Helper to parse CSV string into DataRow[]
 export const parseCSVText = (text: string): DataRow[] => {
   const rows = text.split(/\r?\n/).filter(r => r.trim());
   if (rows.length < 2) throw new Error("Dataset is empty or missing headers.");
@@ -49,13 +48,12 @@ export const parseCSVText = (text: string): DataRow[] => {
   });
 };
 
-// Curated Enterprise Sample Datasets
 const SAMPLE_DATASETS = [
   {
     id: 'retail_sales',
     name: 'Diwali & Holiday Retail Transactions',
-    records: '11,251 Transactions',
-    description: 'Retail consumer dataset with User_ID, Product_Category, Orders, Amount, State, and Age-Group.',
+    badge: '11,251 Rows',
+    description: 'Transaction ledger with User_ID, Product_Category, Orders, Amount, State, and Age demographics.',
     generator: () => {
       const states = ['Maharashtra', 'Uttar Pradesh', 'Karnataka', 'Delhi', 'Gujarat', 'Tamil Nadu', 'Telangana'];
       const categories = ['Clothing & Apparel', 'Food & Grocery', 'Electronics & Gadgets', 'Footwear', 'Home Decor'];
@@ -86,8 +84,8 @@ const SAMPLE_DATASETS = [
   },
   {
     id: 'saas_b2b',
-    name: 'B2B SaaS Pipeline & Revenue Matrix',
-    records: 'Enterprise Accounts',
+    name: 'B2B SaaS Revenue & Pipeline Matrix',
+    badge: '200 Accounts',
     description: 'Account-level revenue analytics with ARR, Contract_Length, Renewal_Probability, Churn_Risk, and Region.',
     generator: () => {
       const tiers = ['Enterprise', 'Mid-Market', 'Strategic Growth', 'Scale Tier'];
@@ -117,8 +115,8 @@ const SAMPLE_DATASETS = [
   {
     id: 'customer_sentiment',
     name: 'Customer Experience & NPS Reviews',
-    records: 'Review Stream',
-    description: 'Text feedback stream including customer comments, sentiment tags, and NPS ratings.',
+    badge: '150 Reviews',
+    description: 'Customer voice feedback stream with review comments, sentiment scores, and response latencies.',
     generator: () => {
       const channels = ['Web App', 'Mobile iOS', 'In-Store POS', 'Customer Portal'];
       const sampleTexts = [
@@ -154,7 +152,6 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('');
 
-  // Database simulator state
   const [dbHost, setDbHost] = useState('enterprise-dw.snowflakecomputing.com');
   const [dbName, setDbName] = useState('ANALYTICS_PROD');
   const [dbTable, setDbTable] = useState('FACT_REVENUE_TRANSACTIONS');
@@ -164,7 +161,7 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
     if (!file) return;
 
     setLoading(true);
-    setLoadingMsg('Parsing local CSV stream...');
+    setLoadingMsg('Ingesting local CSV stream...');
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -172,7 +169,7 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
         const parsed = parseCSVText(text);
         onDataLoaded(parsed, file.name);
       } catch (err: any) {
-        onError(err.message || 'Failed to parse local CSV file.');
+        onError(err.message || 'Failed to parse CSV file.');
       } finally {
         setLoading(false);
       }
@@ -189,7 +186,6 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
     setLoading(true);
     setLoadingMsg('Connecting to Google Sheets live export...');
     try {
-      // Convert standard Google Sheets URL to CSV export link
       let exportUrl = sheetsUrl.trim();
       const match = exportUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
       if (match && match[1]) {
@@ -198,14 +194,12 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
       }
 
       const res = await fetch(exportUrl);
-      if (!res.ok) {
-        throw new Error('Could not fetch Google Sheet. Verify the sheet is set to "Anyone with the link can view".');
-      }
+      if (!res.ok) throw new Error('Could not fetch Google Sheet. Check sharing permissions.');
       const text = await res.text();
       const parsed = parseCSVText(text);
       onDataLoaded(parsed, 'Google Sheets Live Stream');
     } catch (err: any) {
-      onError(err.message || 'Failed to import from Google Sheets. Ensure sharing permissions are public.');
+      onError(err.message || 'Failed to import from Google Sheets. Ensure sheet is public.');
     } finally {
       setLoading(false);
     }
@@ -221,12 +215,12 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
     setLoadingMsg('Streaming remote dataset...');
     try {
       const res = await fetch(directUrl.trim());
-      if (!res.ok) throw new Error(`HTTP error ${res.status}: Failed to retrieve remote file.`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to retrieve remote file.`);
       const text = await res.text();
       const parsed = parseCSVText(text);
       onDataLoaded(parsed, 'Remote CSV URL');
     } catch (err: any) {
-      onError(err.message || 'Failed to stream dataset from remote URL. Check CORS or URL availability.');
+      onError(err.message || 'Failed to stream dataset. Check CORS availability.');
     } finally {
       setLoading(false);
     }
@@ -234,7 +228,7 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
 
   const loadSample = (sample: typeof SAMPLE_DATASETS[0]) => {
     setLoading(true);
-    setLoadingMsg(`Instantiating ${sample.name}...`);
+    setLoadingMsg(`Loading ${sample.name}...`);
     setTimeout(() => {
       try {
         const rows = sample.generator();
@@ -244,92 +238,92 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 350);
   };
 
   const handleDbSimulate = () => {
     setLoading(true);
-    setLoadingMsg(`Connecting to ${dbHost} / [${dbName}.${dbTable}]...`);
+    setLoadingMsg(`Querying ${dbName}.${dbTable}...`);
     setTimeout(() => {
       const rows = SAMPLE_DATASETS[0].generator();
       onDataLoaded(rows, `${dbName}.${dbTable}`);
       setLoading(false);
-    }, 900);
+    }, 700);
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* Source Selector Tab Bar */}
-      <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-slate-900/80 border border-slate-800 rounded-2xl backdrop-blur-md">
+    <div className="w-full max-w-3xl mx-auto space-y-6">
+      {/* Pill Segmented Tab Bar (Nomu-style) */}
+      <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-[#FAF4ED] rounded-full border border-black/[0.04]">
         <button
           onClick={() => setActiveTab('upload')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`nomu-pill px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer ${
             activeTab === 'upload'
-              ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#0E0E10] text-white shadow-sm'
+              : 'text-[#71717A] hover:text-[#0E0E10]'
           }`}
         >
-          <Upload className="w-3.5 h-3.5" /> Local CSV File
+          Local CSV
         </button>
 
         <button
           onClick={() => setActiveTab('sheets')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`nomu-pill px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer ${
             activeTab === 'sheets'
-              ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#0E0E10] text-white shadow-sm'
+              : 'text-[#71717A] hover:text-[#0E0E10]'
           }`}
         >
-          <FileSpreadsheet className="w-3.5 h-3.5" /> Google Sheets
+          Google Sheets
         </button>
 
         <button
           onClick={() => setActiveTab('url')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`nomu-pill px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer ${
             activeTab === 'url'
-              ? 'bg-gradient-to-r from-cyan-600 to-cyan-700 text-white shadow-lg shadow-cyan-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#0E0E10] text-white shadow-sm'
+              : 'text-[#71717A] hover:text-[#0E0E10]'
           }`}
         >
-          <Globe className="w-3.5 h-3.5" /> Remote URL
+          Remote URL
         </button>
 
         <button
           onClick={() => setActiveTab('samples')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`nomu-pill px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer ${
             activeTab === 'samples'
-              ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg shadow-amber-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#0E0E10] text-white shadow-sm'
+              : 'text-[#71717A] hover:text-[#0E0E10]'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5" /> Enterprise Samples
+          Curated Samples
         </button>
 
         <button
           onClick={() => setActiveTab('db')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`nomu-pill px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer ${
             activeTab === 'db'
-              ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#0E0E10] text-white shadow-sm'
+              : 'text-[#71717A] hover:text-[#0E0E10]'
           }`}
         >
-          <Database className="w-3.5 h-3.5" /> Cloud Database
+          Cloud Database
         </button>
       </div>
 
-      {/* Tab Contents */}
-      <div className="bg-white p-8 sm:p-10 rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+      {/* Main Content Box */}
+      <div className="bg-white p-8 sm:p-12 rounded-[36px] border border-black/[0.06] shadow-[0_20px_50px_rgba(0,0,0,0.05)] relative overflow-hidden">
         {loading && (
           <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-30 flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-            <p className="text-sm font-bold text-slate-800">{loadingMsg}</p>
+            <Loader2 className="w-8 h-8 text-[#FF7448] animate-spin" />
+            <p className="text-sm font-bold text-[#0E0E10]">{loadingMsg}</p>
           </div>
         )}
 
-        {/* 1. Local CSV Upload */}
+        {/* 1. Local File Drag & Drop */}
         {activeTab === 'upload' && (
-          <div className="text-center space-y-6">
-            <div className="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-[28px] p-10 transition-all group relative cursor-pointer bg-slate-50/50 hover:bg-indigo-50/30">
+          <div className="text-center">
+            <div className="border-2 border-dashed border-black/[0.08] hover:border-[#FF7448] bg-[#FFFDFB] hover:bg-[#FFF8F5] rounded-[28px] p-12 transition-all relative cursor-pointer group">
               <input
                 type="file"
                 accept=".csv"
@@ -337,135 +331,116 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
               <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 bg-white rounded-2xl border border-slate-200 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                  <Upload className="w-7 h-7 text-indigo-600" />
+                <div className="w-16 h-16 rounded-full bg-[#FAF4ED] flex items-center justify-center group-hover:scale-105 group-hover:bg-[#FF7448] transition-all">
+                  <Upload className="w-6 h-6 text-[#0E0E10] group-hover:text-white transition-colors" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-slate-900">Drag & drop your CSV file here</p>
-                  <p className="text-xs text-slate-400 mt-1">Supports UTF-8 CSV datasets up to 100MB with automated column detection</p>
+                  <p className="text-base font-bold text-[#0E0E10]">Drop your dataset here</p>
+                  <p className="text-xs text-[#71717A] mt-1">Accepts CSV files up to 100MB &bull; Automatic schema mapping</p>
                 </div>
-                <span className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow group-hover:bg-indigo-600 transition-colors">
-                  Browse Local File
+                <span className="nomu-pill mt-2 px-6 py-2.5 rounded-full bg-[#0E0E10] text-white text-xs font-bold group-hover:bg-[#FF7448] transition-colors">
+                  Choose from computer
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        {/* 2. Google Sheets Connector */}
+        {/* 2. Google Sheets */}
         {activeTab === 'sheets' && (
           <div className="space-y-6">
-            <div className="flex items-start gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
-              <FileSpreadsheet className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-emerald-900 space-y-1">
-                <p className="font-bold text-sm">Google Sheets Live Pipeline</p>
-                <p className="text-emerald-700 font-normal">
-                  Paste the shareable link of any Google Sheet. Make sure the sharing permission is set to <strong>"Anyone with the link can view"</strong>.
-                </p>
-              </div>
+            <div className="p-4 bg-[#FAF4ED] rounded-2xl border border-black/[0.04] text-xs text-[#71717A] space-y-1">
+              <p className="font-bold text-[#0E0E10]">Google Sheets Live Sync</p>
+              <p>Paste the shareable link of any Google Sheet set to <em>"Anyone with the link can view"</em>.</p>
             </div>
 
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Google Sheet Shareable URL
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider">
+                Google Sheets Link
               </label>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="url"
                   placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
                   value={sheetsUrl}
                   onChange={e => setSheetsUrl(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="flex-1 bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                 />
                 <button
                   type="button"
                   onClick={handleGoogleSheetsImport}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  className="nomu-pill px-6 py-3 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  Import Live Sheet <ArrowRight className="w-4 h-4" />
+                  Import Sheet <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Quick Demo Google Sheet Button */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>Need a live Google Sheet to test?</span>
+            <div className="pt-2 border-t border-black/[0.06] flex items-center justify-between text-xs text-[#71717A]">
+              <span>Need a sample sheet to test?</span>
               <button
                 type="button"
-                onClick={() => {
-                  setSheetsUrl('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit');
-                }}
-                className="text-emerald-600 hover:text-emerald-700 font-bold underline cursor-pointer"
+                onClick={() => setSheetsUrl('https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit')}
+                className="text-[#FF7448] font-bold hover:underline cursor-pointer"
               >
-                Use Sample Retail Sheet URL
+                Use Sample Retail Sheet
               </button>
             </div>
           </div>
         )}
 
-        {/* 3. Direct CSV URL */}
+        {/* 3. Remote URL */}
         {activeTab === 'url' && (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Raw CSV HTTP/HTTPS Endpoint
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#0E0E10] uppercase tracking-wider">
+                Direct CSV Endpoint
               </label>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="url"
                   placeholder="https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"
                   value={directUrl}
                   onChange={e => setDirectUrl(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-cyan-500 transition-colors"
+                  className="flex-1 bg-[#FAF4ED] border border-black/[0.06] rounded-2xl px-4 py-3 text-sm text-[#0E0E10] placeholder-[#A1A1AA] focus:outline-none focus:border-[#0E0E10] focus:bg-white transition-all"
                 />
                 <button
                   type="button"
                   onClick={handleDirectUrlImport}
-                  className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-cyan-600/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  className="nomu-pill px-6 py-3 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                 >
-                  Fetch Remote CSV <ArrowRight className="w-4 h-4" />
+                  Stream File <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
-            <p className="text-xs text-slate-400">
-              Ensure the target server permits Cross-Origin Requests (CORS) or hosts publicly accessible raw plain text.
-            </p>
+            <p className="text-xs text-[#71717A]">Supports any public raw text endpoint or webhook output.</p>
           </div>
         )}
 
-        {/* 4. Enterprise Sample Datasets */}
+        {/* 4. Curated Samples */}
         {activeTab === 'samples' && (
           <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Curated Enterprise Benchmarks
-              </h4>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Select an enterprise dataset to immediately inspect 4-tier analytics without uploading files:
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {SAMPLE_DATASETS.map(sample => (
                 <div
                   key={sample.id}
                   onClick={() => loadSample(sample)}
-                  className="p-5 bg-slate-50 hover:bg-amber-50/40 border border-slate-200 hover:border-amber-400 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between space-y-3"
+                  className="nomu-card p-5 rounded-2xl bg-[#FAF4ED] hover:bg-white border border-black/[0.04] hover:border-black/[0.1] transition-all cursor-pointer flex flex-col justify-between space-y-3 group"
                 >
                   <div>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded uppercase">
-                      {sample.records}
+                    <span className="text-[10px] font-bold text-[#0E0E10] bg-white px-2.5 py-1 rounded-full border border-black/[0.06]">
+                      {sample.badge}
                     </span>
-                    <h5 className="font-bold text-slate-900 text-sm mt-2 group-hover:text-amber-800 transition-colors">
+                    <h5 className="font-bold text-[#0E0E10] text-sm mt-2.5 group-hover:text-[#FF7448] transition-colors leading-snug">
                       {sample.name}
                     </h5>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed font-light">
+                    <p className="text-xs text-[#71717A] mt-1 font-normal leading-relaxed line-clamp-2">
                       {sample.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center text-xs font-bold text-slate-900 group-hover:text-amber-600 pt-2 border-t border-slate-200/60">
-                    Load Dataset <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center text-xs font-bold text-[#0E0E10] group-hover:text-[#FF7448] pt-2 border-t border-black/[0.04]">
+                    Load Dataset <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               ))}
@@ -473,69 +448,55 @@ export const DataSourceHub: React.FC<DataSourceHubProps> = ({ onDataLoaded, onEr
           </div>
         )}
 
-        {/* 5. Cloud Database Connector */}
+        {/* 5. Cloud Database */}
         {activeTab === 'db' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Cloud Data Warehouse Ingestion
-                </h4>
-                <p className="text-xs text-slate-500">Query Snowflake, PostgreSQL, BigQuery or Supabase securely.</p>
-              </div>
-              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-1 rounded-md">
-                Driver: PostgreSQL / Snowflake TLS
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Host Endpoint</label>
+                <label className="block font-bold text-[#0E0E10] mb-1">Host Endpoint</label>
                 <input
                   type="text"
                   value={dbHost}
                   onChange={e => setDbHost(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono text-[11px]"
+                  className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-xl px-3 py-2 text-[#0E0E10] text-xs font-mono"
                 />
               </div>
-
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Database</label>
+                <label className="block font-bold text-[#0E0E10] mb-1">Database</label>
                 <input
                   type="text"
                   value={dbName}
                   onChange={e => setDbName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono text-[11px]"
+                  className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-xl px-3 py-2 text-[#0E0E10] text-xs font-mono"
                 />
               </div>
-
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Target Table</label>
+                <label className="block font-bold text-[#0E0E10] mb-1">Target Table</label>
                 <input
                   type="text"
                   value={dbTable}
                   onChange={e => setDbTable(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 font-mono text-[11px]"
+                  className="w-full bg-[#FAF4ED] border border-black/[0.06] rounded-xl px-3 py-2 text-[#0E0E10] text-xs font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 text-xs mb-1">SQL Query Extraction</label>
+              <label className="block font-bold text-[#0E0E10] text-xs mb-1">Extraction SQL</label>
               <textarea
                 rows={2}
                 readOnly
-                value={`SELECT * FROM "${dbName}"."PUBLIC"."${dbTable}" ORDER BY 1 DESC LIMIT 500;`}
-                className="w-full bg-slate-950 text-emerald-400 font-mono text-xs rounded-xl p-3 border border-slate-800"
+                value={`SELECT * FROM "${dbName}"."PUBLIC"."${dbTable}" LIMIT 500;`}
+                className="w-full bg-[#0E0E10] text-emerald-400 font-mono text-xs rounded-2xl p-3"
               />
             </div>
 
             <button
               type="button"
               onClick={handleDbSimulate}
-              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/20 flex items-center justify-center gap-2 cursor-pointer"
+              className="nomu-pill w-full py-3 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Database className="w-4 h-4" /> Execute Query &amp; Ingest Records
+              <Database className="w-3.5 h-3.5" /> Run Query &amp; Ingest Records
             </button>
           </div>
         )}
