@@ -65,4 +65,23 @@ export interface AnalysisLogEntry {
   cleanedData?: DataRow[];
 }
 
+export interface CleaningAuditReport {
+  metrics: {
+    initialRows: number;
+    cleanedRows: number;
+    duplicatesRemoved: number;
+    missingValuesImputed: number;
+    stringsNormalized: number;
+    qualityScoreBefore: number;
+    qualityScoreAfter: number;
+  };
+  sampleModifications: Array<{
+    rowIndex: number;
+    column: string;
+    before: any;
+    after: any;
+    action: string;
+  }>;
+}
+
 

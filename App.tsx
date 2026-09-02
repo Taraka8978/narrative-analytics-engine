@@ -5,12 +5,13 @@ import { AuthModal } from './components/AuthModal';
 import { HeroLanding } from './components/HeroLanding';
 import { DataSourceHub } from './components/DataSourceHub';
 import { AnalysisHistoryModal } from './components/AnalysisHistoryModal';
-import { DataRow, AnalysisSummary, DataQualityReport, UserProfile, AnalysisLogEntry } from './types';
+import { DataCleaningAudit } from './components/DataCleaningAudit';
+import { DataRow, AnalysisSummary, DataQualityReport, UserProfile, AnalysisLogEntry, CleaningAuditReport } from './types';
 import { assessDataQuality, analyzeDataset, cleanDataset } from './services/geminiService';
 import { 
   CheckCircle2, AlertCircle, Wand2, Download, Table, 
   Sparkles, ArrowRight, X, Loader2, Clock, Lock, ArrowUpRight,
-  ShieldCheck, FileSpreadsheet, BarChart3, Database
+  ShieldCheck, FileSpreadsheet, BarChart3, Database, AlertTriangle
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -27,6 +28,7 @@ export const App: React.FC = () => {
   const [dataSourceName, setDataSourceName] = useState<string>('');
   const [cleanedData, setCleanedData] = useState<DataRow[] | null>(null);
   const [cleaningReport, setCleaningReport] = useState<string[] | null>(null);
+  const [cleaningAudit, setCleaningAudit] = useState<CleaningAuditReport | null>(null);
   const [qualityReport, setQualityReport] = useState<DataQualityReport | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +90,9 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setRawData(null);
+    setCleanedData(null);
+    setCleaningReport(null);
+    setCleaningAudit(null);
     setAnalysis(null);
     try {
       localStorage.removeItem('narrative_auth_user');
@@ -100,14 +105,16 @@ export const App: React.FC = () => {
     setQualityReport(assessDataQuality(data));
     setCleanedData(null);
     setCleaningReport(null);
+    setCleaningAudit(null);
     setError(null);
   };
 
   const handleCleaning = () => {
     if (!rawData) return;
-    const { cleanedData, report } = cleanDataset(rawData);
+    const { cleanedData, report, audit } = cleanDataset(rawData);
     setCleanedData(cleanedData);
     setCleaningReport(report);
+    setCleaningAudit(audit);
   };
 
   const downloadCSV = () => {
@@ -128,18 +135,19 @@ export const App: React.FC = () => {
   };
 
   const runAnalysis = async () => {
-    const targetData = cleanedData || rawData;
-    if (!targetData || targetData.length === 0) {
-      setError('No data available to analyze after cleaning.');
+    // Strict requirement: User MUST clean dataset first before generating insights
+    if (!cleanedData || cleanedData.length === 0) {
+      setError('Please click "Clean & Impute" first to clean the dataset before generating insights.');
       return;
     }
+
     setIsLoading(true);
     setError(null);
     setLoadingStep('Initializing statistical engines...');
     
     try {
       setLoadingStep('Synthesizing narrative layers...');
-      const results = await analyzeDataset(targetData);
+      const results = await analyzeDataset(cleanedData);
       setAnalysis(results);
       setError(null);
 
@@ -150,12 +158,12 @@ export const App: React.FC = () => {
           userId: currentUser.id,
           datasetName: dataSourceName || 'Curated Dataset',
           timestamp: new Date().toISOString(),
-          rowCount: targetData.length,
-          qualityScore: qualityReport?.score || 95,
+          rowCount: cleanedData.length,
+          qualityScore: cleaningAudit?.metrics.qualityScoreAfter || qualityReport?.score || 98,
           metricName: results.metadata?.metric_name || 'Metric',
           summaryPreview: results.descriptive?.narrative?.slice(0, 160) || '4-tier narrative analysis complete.',
           analysis: results,
-          cleanedData: targetData
+          cleanedData: cleanedData
         };
 
         setUserLogs(prev => {
@@ -205,6 +213,7 @@ export const App: React.FC = () => {
     setDataSourceName('');
     setCleanedData(null);
     setCleaningReport(null);
+    setCleaningAudit(null);
     setQualityReport(null);
     setAnalysis(null);
     setError(null);
@@ -475,33 +484,49 @@ export const App: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-2">
                 {!cleanedData ? (
-                  <button 
-                    onClick={handleCleaning}
-                    className="nomu-pill px-5 py-2.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    Clean &amp; Impute <Wand2 className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button 
+                      onClick={handleCleaning}
+                      className="nomu-pill px-6 py-2.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <Wand2 className="w-3.5 h-3.5" /> Clean &amp; Impute Dataset (Step 1)
+                    </button>
+                    <button 
+                      disabled
+                      className="nomu-pill px-5 py-2.5 rounded-full bg-slate-100 text-slate-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-not-allowed border border-black/[0.04]"
+                      title="Clean dataset first to unlock insight generation"
+                    >
+                      <Lock className="w-3.5 h-3.5" /> Generate Insights (Locked)
+                    </button>
+                  </>
                 ) : (
-                  <button 
-                    onClick={downloadCSV}
-                    className="nomu-pill px-5 py-2.5 rounded-full bg-white hover:bg-[#FAF4ED] text-[#0E0E10] border border-black/[0.08] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    Download Clean CSV <Download className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button 
+                      onClick={downloadCSV}
+                      className="nomu-pill px-5 py-2.5 rounded-full bg-white hover:bg-[#FAF4ED] text-[#0E0E10] border border-black/[0.08] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download Clean CSV
+                    </button>
+                    <button 
+                      onClick={runAnalysis}
+                      className="nomu-pill px-7 py-2.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md hover:shadow-lg cursor-pointer animate-pulse"
+                    >
+                      Generate Insights <Sparkles className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
-                <button 
-                  onClick={runAnalysis}
-                  disabled={qualityReport?.status === 'red'}
-                  className={`nomu-pill px-6 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
-                    qualityReport?.status === 'red' 
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                      : 'bg-[#FF7448] hover:bg-[#F26235] text-white hover:shadow-md'
-                  }`}
-                >
-                  Generate Insights <Sparkles className="w-3.5 h-3.5" />
-                </button>
               </div>
             </div>
+
+            {/* Step 1 Required Warning when not yet cleaned */}
+            {!cleanedData && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-amber-900 text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Step 1 Required:</strong> To prevent skewed calculations, missing values and duplicates must be cleaned first. Click <strong>"Clean &amp; Impute Dataset (Step 1)"</strong> above to inspect the before vs. after proof and unlock insight generation.
+                </span>
+              </div>
+            )}
 
             {error && (
               <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2 text-rose-700 text-xs">
@@ -517,7 +542,7 @@ export const App: React.FC = () => {
                     Automated Ingestion Audit
                   </span>
                   <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-[#FAF4ED] text-[#0E0E10] border border-black/[0.06]">
-                    Quality Score: {qualityReport.score}/100 &bull; {qualityReport.status.toUpperCase()}
+                    Baseline Quality Score: {qualityReport.score}/100 &bull; {qualityReport.status.toUpperCase()}
                   </span>
                 </div>
 
@@ -537,6 +562,15 @@ export const App: React.FC = () => {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Data Hygiene Audit & Before vs. After Proof Component */}
+            {cleaningAudit && cleanedData && (
+              <DataCleaningAudit
+                audit={cleaningAudit}
+                rawData={rawData}
+                cleanedData={cleanedData}
+              />
             )}
 
             {/* Cleaning Transformation Audit */}
@@ -563,20 +597,20 @@ export const App: React.FC = () => {
                   <Table className="w-4 h-4 text-[#71717A]" /> Schema Preview
                 </div>
                 <span className="text-xs text-[#71717A]">
-                  Top 5 of {rawData.length.toLocaleString()} rows
+                  Top 5 of {(cleanedData || rawData).length.toLocaleString()} rows {cleanedData ? '(Cleaned)' : '(Raw)'}
                 </span>
               </div>
               <div className="overflow-x-auto rounded-2xl border border-black/[0.06]">
                 <table className="w-full text-left text-xs text-[#0E0E10]">
                   <thead className="bg-[#FAF4ED] text-[#71717A] font-bold uppercase text-[10px] tracking-wider border-b border-black/[0.06]">
                     <tr>
-                      {Object.keys(rawData[0] || {}).slice(0, 7).map((col, i) => (
+                      {Object.keys((cleanedData || rawData)[0] || {}).slice(0, 7).map((col, i) => (
                         <th key={i} className="px-4 py-3">{col}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.04]">
-                    {rawData.slice(0, 5).map((row, rIdx) => (
+                    {(cleanedData || rawData).slice(0, 5).map((row, rIdx) => (
                       <tr key={rIdx} className="hover:bg-[#FAF4ED]/50 transition-colors">
                         {Object.values(row).slice(0, 7).map((val: any, cIdx) => (
                           <td key={cIdx} className="px-4 py-3 font-mono text-[11px] text-[#0E0E10] truncate max-w-[150px]">

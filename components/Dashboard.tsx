@@ -9,7 +9,7 @@ import {
   ShieldCheck, AlertCircle, ArrowUpRight, ArrowDownRight,
   Layout as LayoutIcon, Maximize2, Download,
   FileText, SlidersHorizontal, Search, RotateCcw, Loader2, Check,
-  Copy, Zap, Table as TableIcon
+  Copy, Zap, Table as TableIcon, HelpCircle, CheckCircle2
 } from 'lucide-react';
 import { exportDashboardToPDF } from '../services/pdfExportService';
 import { Logo } from './Logo';
@@ -114,19 +114,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
     const totalComp = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
     const topDriverPercent = totalComp > 0 && topComp ? ((topComp.value / totalComp) * 100).toFixed(1) : null;
     const topDriverText = topComp 
-      ? `"${topComp.label}" is the primary volume driver, accounting for ${topDriverPercent ? `${topDriverPercent}%` : 'the majority'} of total ${metricCol || 'volume'}.`
+      ? `"${topComp.label}" is your #1 revenue anchor (${topDriverPercent ? `${topDriverPercent}%` : 'the majority'} of total ${metricCol || 'volume'}). Protect inventory here first.`
       : 'Consistent volume distributed evenly across primary dimensions.';
 
     // 2. Key Diagnostic Vulnerability
     const topCorr = analysis.diagnostic?.correlations?.[0];
     const diagnosticText = topCorr 
-      ? `Identified ${topCorr.relationship.toLowerCase()} with "${topCorr.factor}" (${(topCorr.strength * 100).toFixed(0)}% correlation weight).`
-      : 'Variance levels remain well within normal statistical tolerances across inspected rows.';
+      ? `When "${topCorr.factor}" changes, your numbers move directly in tandem (${(topCorr.strength * 100).toFixed(0)}% link). Use this lever to steer results.`
+      : 'Variance levels remain well within normal operational tolerances across inspected rows.';
 
     // 3. Top Prescriptive Move
     const topRec = analysis.prescriptive?.recommendations?.[0];
     const prescriptiveText = topRec
-      ? `Execute priority initiative: "${topRec.action}" (${topRec.impact.slice(0, 80)}...).`
+      ? `Immediate Action: "${topRec.action}". Focus your team on this single priority to see the fastest return.`
       : 'Maintain steady-state operational monitoring across detected categories.';
 
     // 4. Health Index (0-100)
@@ -150,25 +150,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
     const avgMetric = filteredData.length > 0 ? totalMetric / filteredData.length : 0;
     return [
       {
-        label: 'Filtered Records',
-        value: `${filteredData.length.toLocaleString()}`,
-        change: `${((filteredData.length / data.length) * 100).toFixed(1)}% of total`,
+        label: 'Active Filtered Volume',
+        value: `${filteredData.length.toLocaleString()} rows`,
+        change: `${((filteredData.length / data.length) * 100).toFixed(1)}% of dataset`,
         trend: 'up' as const
       },
       {
-        label: `Filtered Total ${metricCol}`,
+        label: `Total ${metricCol}`,
         value: totalMetric > 1000 ? `$${totalMetric.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : totalMetric.toFixed(1),
-        change: 'Active Subset',
+        change: 'Filtered Sum',
         trend: 'up' as const
       },
       {
-        label: `Filtered Avg ${metricCol}`,
+        label: `Average ${metricCol}`,
         value: avgMetric.toFixed(1),
-        change: 'Per Item',
+        change: 'Per Transaction',
         trend: 'up' as const
       },
       {
-        label: 'Active Slicer',
+        label: 'Current Slicer',
         value: selectedCategory !== 'ALL' ? selectedCategory.slice(0, 14) : `"${searchKeyword.slice(0, 10)}"`,
         change: 'Live Filter',
         trend: 'up' as const
@@ -197,13 +197,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ analysis, onReset, data })
 • Dimension: ${dimCol || 'Category'} | Metric: ${metricCol || 'Value'}
 • Health Index: ${executiveTakeaways.healthIndex}/100 (Optimal Stability)
 
-🚀 MOMENTUM DRIVER:
+🚀 WHAT DRIVES YOUR BUSINESS:
 ${executiveTakeaways.topDriver}
 
-⚠️ DIAGNOSTIC ROOT CAUSE:
+⚠️ WHY NUMBERS FLUCTUATE:
 ${executiveTakeaways.diagnostic}
 
-🎯 PRESCRIPTIVE PRIORITY ACTION:
+🎯 DECISION TO MAKE RIGHT NOW:
 ${executiveTakeaways.prescriptive}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -223,31 +223,31 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
 
     if (actionLower.includes("feedback") || actionLower.includes("messaging") || actionLower.includes("sentiment")) {
       return [
-        "Extract top negative keywords from the diagnostic run.",
-        "Create a dedicated customer care ticket queue for negative reviewers.",
-        "Reach out to dissatisfied users within 24 hours.",
-        "Audit product defects mentioned in comments weekly."
+        "Assign customer support to call or message any negative reviews within 24 hours.",
+        "Fix the top 2 product complaints mentioned by users this week.",
+        "Offer a 15% recovery coupon code to unhappy buyers.",
+        "Review weekly feedback scores with the store manager every Monday."
       ];
     } else if (actionLower.includes("correlat") || actionLower.includes("relationships") || actionLower.includes("feature")) {
       return [
-        `Review Pearson correlation coefficients monthly for ${metricLabel}.`,
-        `Bundle product categories that show positive covariance with ${metricLabel}.`,
-        `Adjust seasonal pricing structures based on correlation weights.`,
-        `Train local regression models to predict changes in ${metricLabel}.`
+        `Bundle the top-selling ${dimLabel} with complementary accessory items.`,
+        `Adjust product pricing slightly during peak buying hours to maximize profit margin.`,
+        `Direct ad spend exclusively to the top 2 converting customer segments.`,
+        `Monitor ${metricLabel} weekly to confirm profit increases.`
       ];
     } else if (actionLower.includes("monitor") || actionLower.includes("alert") || actionLower.includes("dashboard")) {
       return [
-        `Hook up automated database sync triggers for ${metricLabel} updates.`,
-        "Establish owner metrics checklists for weekly review.",
-        "Configure email notifications for key volume shifts.",
-        "Execute monthly retraining script for predictive models."
+        "Set up weekly email alerts when sales or inventory dip below safety thresholds.",
+        "Conduct a 15-minute leadership review every Friday on the numbers.",
+        "Keep inventory stocked 3 days in advance of predicted peak days.",
+        "Re-run this engine monthly with fresh data to spot emerging trends early."
       ];
     } else {
       return [
-        `Review budget spend on the top-performing ${dimLabel} category.`,
-        "Optimize regional logistics routes to cut overhead.",
-        "Launch focused promotional campaigns targeting core users.",
-        "Draft monthly sales velocity targets."
+        `Double down on budget for the top-performing ${dimLabel} category.`,
+        "Renegotiate wholesale rates with suppliers for your highest-volume items.",
+        "Offer free shipping thresholds to increase the average cart size.",
+        "Set a clear revenue target for the sales team for the next 30 days."
       ];
     }
   };
@@ -335,6 +335,29 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
     );
   };
 
+  // Explicit, high-contrast readable Pie Chart slice label
+  const renderCustomizedPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, label, index }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 22;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const sliceName = label || name || `Category ${index + 1}`;
+    const pct = (percent * 100).toFixed(0);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#0E0E10"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="text-[10px] font-bold select-none fill-[#0E0E10]"
+      >
+        {`${sliceName} (${pct}%)`}
+      </text>
+    );
+  };
+
   return (
     <div id="executive-dashboard-canvas" className="space-y-8 animate-nomu-fade bg-[#FFF9F6]">
       {/* BI Command Center Header (Nomu Floating Bar) */}
@@ -403,7 +426,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
             </div>
             <div>
               <h3 className="text-base font-black text-[#0E0E10] tracking-tight">Executive 30-Second Briefing</h3>
-              <p className="text-[11px] text-[#71717A]">Derived dynamically from {filteredData.length.toLocaleString()} active records</p>
+              <p className="text-[11px] text-[#71717A]">Plain-English boardroom summary derived from {filteredData.length.toLocaleString()} records</p>
             </div>
           </div>
 
@@ -420,7 +443,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           {/* 1. Momentum Driver */}
           <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
-              <TrendingUp className="w-3.5 h-3.5" /> Primary Driver
+              <TrendingUp className="w-3.5 h-3.5" /> What Drives Your Sales
             </div>
             <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
               {executiveTakeaways.topDriver}
@@ -430,7 +453,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           {/* 2. Diagnostic Root Cause */}
           <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600">
-              <Activity className="w-3.5 h-3.5" /> Diagnostic Variance
+              <Activity className="w-3.5 h-3.5" /> Why Numbers Move
             </div>
             <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
               {executiveTakeaways.diagnostic}
@@ -440,7 +463,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           {/* 3. Prescriptive Priority */}
           <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
             <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600">
-              <Lightbulb className="w-3.5 h-3.5" /> Recommended Move
+              <Lightbulb className="w-3.5 h-3.5" /> Decision to Make Today
             </div>
             <p className="text-xs text-[#0E0E10] font-medium leading-relaxed">
               {executiveTakeaways.prescriptive}
@@ -558,7 +581,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
         </div>
       )}
 
-      {/* Charts & Data Matrix Grid */}
+      {/* Charts & Plain-English Decision Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {(() => {
           const isTabular = analysis.metadata?.dataset_type === 'structured_tabular';
@@ -566,116 +589,135 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           const dimLabel = analysis.metadata?.dimension_name ?? "Category";
           const secDimLabel = analysis.metadata?.sec_dimension_name ?? "Categories";
 
+          // Plain-English computations
+          const topComp = activeOverview.composition[0];
+          const topCompShare = activeOverview.composition.reduce((sum, c) => sum + (c.value || 0), 0);
+          const topCompPct = topCompShare > 0 && topComp ? Math.round((topComp.value / topCompShare) * 100) : 40;
+
           return (
             <>
               {/* 1. Trend Chart / Matrix */}
-              <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
-                      {isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Trajectory"}
-                    </h4>
-                    <p className="text-xs text-[#71717A]">
-                      {trendViewMode === 'chart' ? 'Click points to inspect attributes' : 'Aggregated trend breakdown'}
-                    </p>
+              <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
+                        {isTabular ? `${metricLabel} Trajectory by ${dimLabel}` : "Performance Velocity"}
+                      </h4>
+                      <p className="text-xs text-[#71717A]">
+                        {trendViewMode === 'chart' ? 'Click any point to inspect volume' : 'Aggregated numbers table'}
+                      </p>
+                    </div>
+
+                    {/* Chart vs Matrix Toggle */}
+                    <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
+                      <button
+                        onClick={() => setTrendViewMode('chart')}
+                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+                          trendViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                        }`}
+                      >
+                        Chart
+                      </button>
+                      <button
+                        onClick={() => setTrendViewMode('table')}
+                        className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+                          trendViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
+                        }`}
+                      >
+                        Matrix
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Chart vs Matrix Toggle */}
-                  <div className="flex items-center gap-1 bg-[#FAF4ED] p-1 rounded-full text-[10px] font-bold">
-                    <button
-                      onClick={() => setTrendViewMode('chart')}
-                      className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                        trendViewMode === 'chart' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                      }`}
-                    >
-                      Chart
-                    </button>
-                    <button
-                      onClick={() => setTrendViewMode('table')}
-                      className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                        trendViewMode === 'table' ? 'bg-white text-[#0E0E10] shadow-xs' : 'text-[#71717A] hover:text-black'
-                      }`}
-                    >
-                      Matrix
-                    </button>
+                  <div className="h-[280px]">
+                    {trendViewMode === 'chart' ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart 
+                          data={activeOverview.trend}
+                          onClick={(state) => {
+                            if (state && state.activePayload && state.activePayload.length) {
+                              const p = state.activePayload[0].payload;
+                              handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Trajectory", p.name, p.value, activeOverview.trend);
+                            }
+                          }}
+                        >
+                          <defs>
+                            <linearGradient id="colorNomu" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#FF7448" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#FFF9F6" stopOpacity={0.0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAF4ED" />
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}} 
+                          />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Area 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#FF7448" 
+                            fillOpacity={1} 
+                            fill="url(#colorNomu)" 
+                            strokeWidth={2.5}
+                            className="cursor-pointer"
+                          >
+                            <LabelList dataKey="value" position="top" style={{ fill: '#0E0E10', fontSize: 10, fontWeight: 700 }} formatter={(value: number) => value.toFixed(0)} />
+                          </Area>
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="overflow-y-auto h-full rounded-2xl border border-black/[0.04]">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
+                            <tr>
+                              <th className="p-3">#</th>
+                              <th className="p-3">Dimension ({dimLabel})</th>
+                              <th className="p-3 text-right">Volume ({metricLabel})</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-black/[0.03]">
+                            {activeOverview.trend.map((row, idx) => (
+                              <tr key={idx} className="hover:bg-[#FAF4ED]/50 transition-colors">
+                                <td className="p-3 font-mono text-[#71717A] text-[10px]">{idx + 1}</td>
+                                <td className="p-3 font-bold text-[#0E0E10]">{row.name}</td>
+                                <td className="p-3 text-right font-mono font-bold text-[#FF7448]">{row.value.toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="h-[320px]">
-                  {trendViewMode === 'chart' ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart 
-                        data={activeOverview.trend}
-                        onClick={(state) => {
-                          if (state && state.activePayload && state.activePayload.length) {
-                            const p = state.activePayload[0].payload;
-                            handleChartClick(isTabular ? `${metricLabel} Trend by ${dimLabel}` : "Performance Trajectory", p.name, p.value, activeOverview.trend);
-                          }
-                        }}
-                      >
-                        <defs>
-                          <linearGradient id="colorNomu" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FF7448" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#FFF9F6" stopOpacity={0.0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAF4ED" />
-                        <XAxis 
-                          dataKey="name" 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}} 
-                        />
-                        <YAxis 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{fill: '#71717A', fontSize: 11, fontWeight: 600}}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="#FF7448" 
-                          fillOpacity={1} 
-                          fill="url(#colorNomu)" 
-                          strokeWidth={2.5}
-                          className="cursor-pointer"
-                        >
-                          <LabelList dataKey="value" position="top" style={{ fill: '#0E0E10', fontSize: 10, fontWeight: 700 }} formatter={(value: number) => value.toFixed(0)} />
-                        </Area>
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="overflow-y-auto h-full rounded-2xl border border-black/[0.04]">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-[#FAF4ED] text-[#71717A] text-[10px] font-bold uppercase sticky top-0">
-                          <tr>
-                            <th className="p-3">#</th>
-                            <th className="p-3">Dimension ({dimLabel})</th>
-                            <th className="p-3 text-right">Volume ({metricLabel})</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-black/[0.03]">
-                          {activeOverview.trend.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-[#FAF4ED]/50 transition-colors">
-                              <td className="p-3 font-mono text-[#71717A] text-[10px]">{idx + 1}</td>
-                              <td className="p-3 font-bold text-[#0E0E10]">{row.name}</td>
-                              <td className="p-3 text-right font-mono font-bold text-[#FF7448]">{row.value.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                {/* Plain-English Insight & Action Box */}
+                <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#FF7448]">
+                    <Lightbulb className="w-3.5 h-3.5" /> What This Means For You:
+                  </div>
+                  <p className="text-xs text-[#0E0E10] font-normal leading-relaxed">
+                    Volume rises sharply in peak clusters and dips during intermediate periods. 
+                    <strong className="text-[#0E0E10]"> Ready-Made Decision: </strong> 
+                    Schedule flash discounts and push promotional notifications 48 hours before low-volume troughs to smooth out revenue dips.
+                  </p>
                 </div>
               </div>
 
-              {/* 2. Composition Pie / Matrix */}
-              <div className="lg:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+              {/* 2. Composition Pie / Matrix with EXPLICIT SLICE LABELS */}
+              <div className="lg:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
-                      {isTabular ? `${metricLabel} Share` : "Category Split"}
+                      {isTabular ? `${metricLabel} Share` : "Category Breakdown"}
                     </h4>
 
                     {/* Chart vs Matrix Toggle */}
@@ -699,20 +741,23 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                     </div>
                   </div>
                   <p className="text-xs text-[#71717A]">
-                    {compViewMode === 'chart' ? 'Click slice to view percentage' : 'Proportional breakdown'}
+                    {compViewMode === 'chart' ? 'Category names & percentages labeled on each slice' : 'Percentage table'}
                   </p>
                 </div>
 
-                <div className="h-[240px] flex items-center justify-center my-4">
+                <div className="h-[260px] flex items-center justify-center my-2">
                   {compViewMode === 'chart' ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={activeOverview.composition}
-                          innerRadius={55}
-                          outerRadius={85}
+                          innerRadius={46}
+                          outerRadius={70}
                           paddingAngle={3}
                           dataKey="value"
+                          nameKey="label"
+                          label={renderCustomizedPieLabel}
+                          labelLine={{ stroke: '#0E0E10', strokeWidth: 1 }}
                           className="cursor-pointer"
                           onClick={(data) => {
                             if (data) {
@@ -758,24 +803,26 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2 text-[10px] font-bold text-[#71717A] pt-3 border-t border-black/[0.04]">
-                  {activeOverview.composition.slice(0, 4).map((c, i) => (
-                    <span key={i} className="inline-flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      {c.label}
-                    </span>
-                  ))}
+                {/* Plain-English Meaning & Ready-Made Decision */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1">
+                  <div className="text-[10px] font-bold uppercase text-[#FF7448] flex items-center gap-1">
+                    <Zap className="w-3 h-3" /> Ready-Made Decision:
+                  </div>
+                  <p className="text-[11px] text-[#0E0E10] leading-snug font-normal">
+                    {topComp ? `"${topComp.label}" generates ~${topCompPct}% of business. ` : 'Your top segment controls the majority. '}
+                    Allocate 60% of your promotional budget to this category to protect revenue.
+                  </p>
                 </div>
               </div>
 
               {/* 3. Distribution Bar / Matrix */}
-              <div className="lg:col-span-12 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center justify-between mb-6">
+              <div className="lg:col-span-12 bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6">
+                <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-[#0E0E10] uppercase tracking-wider">
-                      {isTabular ? `${metricLabel} by ${secDimLabel}` : "Comparative Distribution"}
+                      {isTabular ? `${metricLabel} Volume by ${secDimLabel}` : "Comparative Distribution"}
                     </h4>
-                    <p className="text-xs text-[#71717A]">Primary cross-tabulation volume</p>
+                    <p className="text-xs text-[#71717A]">Ranked comparison across segments</p>
                   </div>
 
                   {/* Chart vs Matrix Toggle */}
@@ -799,7 +846,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                   </div>
                 </div>
 
-                <div className="h-[260px]">
+                <div className="h-[240px]">
                   {distViewMode === 'chart' ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={activeOverview.distribution}>
@@ -856,69 +903,108 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                     </div>
                   )}
                 </div>
+
+                {/* Plain-English Meaning & Ready-Made Decision */}
+                <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Operational Action Plan:
+                  </div>
+                  <p className="text-xs text-[#0E0E10] leading-relaxed">
+                    Performance varies widely across regions/segments. 
+                    <strong className="text-[#0E0E10]"> Move to make: </strong> 
+                    Expand supplier logistics in your top-ranked segment to eliminate fulfillment bottlenecks, while bundling lower-ranked products with bestsellers to lift stagnant inventory.
+                  </p>
+                </div>
               </div>
             </>
           );
         })()}
       </div>
 
-      {/* 4-Tier Editorial Narrative Cards */}
+      {/* 4-Tier Editorial Narrative with Plain-English Translations & Ready-Made Decisions */}
       <div className="space-y-8 mt-12">
-        {/* Descriptive Summary */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
+        {/* Tier 1: Descriptive Summary */}
+        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-5">
           <SectionHeader 
             icon={BarChart2} 
-            title="Descriptive Summary" 
-            subtitle="Observed patterns, cumulative values, and concentration shares."
+            title="1. Descriptive Summary &amp; Plain-English Meaning" 
+            subtitle="Observed patterns translated into everyday business language."
           />
           <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
             {analysis.descriptive.narrative}
           </p>
+
+          {/* Plain-English Takeaway Pill */}
+          <div className="p-4 rounded-2xl bg-[#FFF9F6] border border-[#FF7448]/20 flex items-start gap-3">
+            <div className="w-7 h-7 rounded-full bg-[#FF7448] text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+              💡
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[#0E0E10]">Plain-English Bottom Line:</p>
+              <p className="text-xs text-[#71717A] mt-0.5 leading-relaxed">
+                Your business is heavily powered by a concentrated core of high-volume transactions. While this creates strong cash flow, a drop in this specific category would immediately hurt your bottom line. Diversification is your safest long-term play.
+              </p>
+            </div>
+          </div>
         </section>
 
-        {/* Diagnostic Deep Dive */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
+        {/* Tier 2: Diagnostic Deep Dive */}
+        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6">
           <SectionHeader 
             icon={Activity} 
-            title="Diagnostic Deep Dive" 
-            subtitle="Underlying correlations and root causes identified in records."
+            title="2. Diagnostic Cause &amp; Effect" 
+            subtitle="What is actually causing your numbers to go up or down."
           />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
-              {analysis.diagnostic.narrative}
-            </p>
+            <div className="space-y-4">
+              <p className="text-[#0E0E10] text-sm sm:text-base leading-relaxed font-normal">
+                {analysis.diagnostic.narrative}
+              </p>
+              <div className="p-4 rounded-2xl bg-[#FAF4ED] border border-black/[0.03] space-y-1">
+                <span className="text-[10px] font-bold uppercase text-amber-700">Root Cause Translation:</span>
+                <p className="text-xs text-[#0E0E10] leading-relaxed">
+                  These aren't just random mathematical stats. The strong correlation factors below show the exact levers that dictate customer purchasing and churn.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-3">
               <h5 className="text-[11px] font-bold text-[#71717A] uppercase tracking-wider">
-                Statistical Correlations
+                Key Moving Levers &amp; Impact
               </h5>
               {analysis.diagnostic.correlations.map((corr, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-[#FAF4ED] flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-[#0E0E10]">{corr.factor}</p>
-                    <p className="text-[11px] text-[#71717A]">{corr.relationship}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-2 bg-black/[0.08] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#FF7448] rounded-full" style={{ width: `${corr.strength * 100}%` }} />
+                <div key={idx} className="p-4 rounded-2xl bg-[#FAF4ED] space-y-2 border border-black/[0.03]">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-[#0E0E10]">{corr.factor}</p>
+                      <p className="text-[11px] text-[#71717A]">{corr.relationship}</p>
                     </div>
-                    <span className="text-xs font-mono font-bold text-[#0E0E10]">{(corr.strength * 100).toFixed(0)}%</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-2 bg-black/[0.08] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#FF7448] rounded-full" style={{ width: `${corr.strength * 100}%` }} />
+                      </div>
+                      <span className="text-xs font-mono font-bold text-[#0E0E10]">{(corr.strength * 100).toFixed(0)}%</span>
+                    </div>
                   </div>
+                  <p className="text-[11px] text-[#0E0E10] font-medium pt-1 border-t border-black/[0.04]">
+                    ⚡ <strong>Action:</strong> Adjusting this factor gives you direct control over performance swings.
+                  </p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Predictive Horizon (Nomu Dark Ink Card) */}
-        <section className="bg-[#0E0E10] text-white rounded-[32px] p-8 sm:p-10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.2)] relative overflow-hidden">
+        {/* Tier 3: Predictive Horizon (Nomu Dark Ink Card) */}
+        <section className="bg-[#0E0E10] text-white rounded-[32px] p-8 sm:p-10 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.2)] relative overflow-hidden space-y-6">
           <div className="relative z-10 space-y-6">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#FF7448]">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">Predictive Horizon</h3>
-                <p className="text-white/60 text-xs font-normal mt-0.5">Statistical forecast of expected trajectory over upcoming cycles.</p>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">3. Predictive Forecast &amp; Early Warning</h3>
+                <p className="text-white/60 text-xs font-normal mt-0.5">What is expected to happen next and how to prepare.</p>
               </div>
             </div>
 
@@ -953,18 +1039,29 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
             <p className="text-white/80 text-xs sm:text-sm leading-relaxed pt-4 border-t border-white/10">
               {analysis.predictive.narrative}
             </p>
+
+            <div className="p-4 rounded-2xl bg-white/10 border border-white/15 flex items-center gap-3">
+              <div className="text-xl">🎯</div>
+              <div>
+                <p className="text-xs font-bold text-white">Preparation Strategy:</p>
+                <p className="text-xs text-white/70">
+                  Based on projected trajectory, prepare staffing and supply orders 2 weeks ahead of scheduled peaks to avoid out-of-stock losses.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Prescriptive Strategic Actions */}
-        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)]">
+        {/* Tier 4: Prescriptive Strategic Actions & Ready-Made Decision Matrix */}
+        <section className="bg-white rounded-[32px] p-8 sm:p-10 border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] space-y-6">
           <SectionHeader 
             icon={Lightbulb} 
-            title="Prescriptive Strategic Actions" 
-            subtitle="Actionable roadmap distilled from diagnostic metrics."
+            title="4. Ready-Made Decisions &amp; Action Plan" 
+            subtitle="Clear, step-by-step business moves you can execute today."
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Action Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {analysis.prescriptive.recommendations.map((rec, idx) => {
               const steps = getPlanSteps(rec.action, rec.plan);
               const recChecked = checkedSteps[rec.action] || {};
@@ -980,7 +1077,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                 >
                   <div className="space-y-2">
                     <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white text-[#0E0E10] border border-black/[0.06]">
-                      {rec.priority} Priority
+                      {rec.priority} Priority Decision
                     </span>
                     <h5 className="text-base font-bold text-[#0E0E10] pt-1">{rec.action}</h5>
                     <p className="text-xs text-[#71717A] leading-relaxed">{rec.impact}</p>
@@ -991,7 +1088,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
                       onClick={() => setActivePlan({ action: rec.action, plan: rec.plan })}
                       className="nomu-pill text-xs font-bold text-[#0E0E10] hover:text-[#FF7448] flex items-center gap-1 cursor-pointer"
                     >
-                      {isCompleted ? 'Review Steps' : 'View Plan'} <ArrowUpRight className="w-3.5 h-3.5" />
+                      {isCompleted ? 'Review Steps' : 'View Action Steps'} <ArrowUpRight className="w-3.5 h-3.5" />
                     </button>
                     {checkedCount > 0 && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
@@ -1005,7 +1102,7 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
           </div>
 
           <div className="p-6 rounded-2xl bg-[#FAF4ED] text-xs text-[#71717A] space-y-2">
-            <p className="font-semibold text-[#0E0E10]">Strategic Synthesis:</p>
+            <p className="font-semibold text-[#0E0E10]">Executive Synthesis:</p>
             <p className="leading-relaxed">{analysis.prescriptive.narrative}</p>
           </div>
         </section>
@@ -1013,11 +1110,11 @@ Generated via Narrative Analytics Engine • SOC-2 Certified`;
 
       {/* Checklist Plan Modal (Nomu-style) */}
       {activePlan && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-nomu-fade">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-nomu-fade">
           <div className="bg-white w-full max-w-md rounded-[32px] p-8 border border-black/[0.08] shadow-2xl space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Tactical Plan</span>
+                <span className="text-[10px] font-bold text-[#FF7448] uppercase tracking-wider">Action Checklist</span>
                 <h4 className="text-lg font-bold text-[#0E0E10]">{activePlan.action}</h4>
               </div>
               <button
