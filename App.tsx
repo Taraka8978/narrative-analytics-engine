@@ -9,7 +9,8 @@ import { DataRow, AnalysisSummary, DataQualityReport, UserProfile, AnalysisLogEn
 import { assessDataQuality, analyzeDataset, cleanDataset } from './services/geminiService';
 import { 
   CheckCircle2, AlertCircle, Wand2, Download, Table, 
-  Sparkles, ArrowRight, X, Loader2, Clock, ArrowUpRight 
+  Sparkles, ArrowRight, X, Loader2, Clock, Lock, ArrowUpRight,
+  ShieldCheck, FileSpreadsheet, BarChart3, Database
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -59,7 +60,7 @@ export const App: React.FC = () => {
       localStorage.setItem('narrative_auth_user', JSON.stringify(user));
     } catch {}
 
-    // If there is an active analysis, automatically associate it with the newly logged in user
+    // If there is an active analysis, associate it with the logged in user
     if (analysis && rawData) {
       const pendingLog: AnalysisLogEntry = {
         id: `log_${Date.now()}`,
@@ -86,6 +87,8 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setRawData(null);
+    setAnalysis(null);
     try {
       localStorage.removeItem('narrative_auth_user');
     } catch {}
@@ -140,7 +143,7 @@ export const App: React.FC = () => {
       setAnalysis(results);
       setError(null);
 
-      // If user is authenticated, save directly to their profile history
+      // Log directly to the authenticated user's profile history
       if (currentUser) {
         const newLog: AnalysisLogEntry = {
           id: `log_${Date.now()}`,
@@ -235,7 +238,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // 2. Analysis Dashboard View
+  // 2. Analysis Dashboard View (Only accessible for active analysis)
   if (analysis) {
     return (
       <Layout 
@@ -269,7 +272,125 @@ export const App: React.FC = () => {
     );
   }
 
-  // 3. Homepage & Data Staging View (Loaded directly for all users)
+  // 3. PUBLIC SHOWCASE LANDING (Displayed when visitor is NOT authenticated)
+  // Protected: Visitors can browse the entire premium website, but cannot ingest datasets or run the engine without signing in!
+  if (!currentUser) {
+    return (
+      <Layout 
+        user={null} 
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        currentStep="connect"
+      >
+        <div className="w-full space-y-16 animate-nomu-fade">
+          {/* Nomu-Style Hero Section */}
+          <HeroLanding
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onExploreDemo={() => setIsAuthModalOpen(true)}
+            isAuthenticated={false}
+          />
+
+          {/* Protected Client Workspace Gate Card */}
+          <section className="bg-white rounded-[36px] border border-black/[0.06] p-8 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.05)] text-center space-y-8 max-w-4xl mx-auto">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FAF4ED] text-xs font-bold text-[#0E0E10]">
+                <Lock className="w-3.5 h-3.5 text-[#FF7448]" />
+                Protected Enterprise Client Workspace
+              </div>
+              <h3 className="text-3xl sm:text-4xl font-black text-[#0E0E10] tracking-tight">
+                Authentication Required to Ingest Datasets
+              </h3>
+              <p className="text-xs sm:text-sm text-[#71717A] max-w-xl mx-auto leading-relaxed font-normal">
+                To protect proprietary computational models and guarantee zero data leakage, file ingestion, Google Sheets syncing, and 4-tier synthesis are restricted to authorized clients and partners.
+              </p>
+            </div>
+
+            {/* 3 Capabilities Preview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+              <div className="p-5 rounded-2xl bg-[#FAF4ED] border border-black/[0.04] space-y-2">
+                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#FF7448] shadow-xs">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <h4 className="font-bold text-sm text-[#0E0E10]">Multi-Source Ingestion</h4>
+                <p className="text-xs text-[#71717A] leading-relaxed">
+                  Direct CSV upload, live Google Sheets sync, SQL query endpoints, and curated enterprise benchmark sets.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#FAF4ED] border border-black/[0.04] space-y-2">
+                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#0E0E10] shadow-xs">
+                  <BarChart3 className="w-4 h-4" />
+                </div>
+                <h4 className="font-bold text-sm text-[#0E0E10]">4-Tier Synthesis</h4>
+                <p className="text-xs text-[#71717A] leading-relaxed">
+                  Descriptive summaries, Pearson diagnostic correlations, Monte Carlo predictive horizons, and prescriptive actions.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#FAF4ED] border border-black/[0.04] space-y-2">
+                <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-emerald-600 shadow-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h4 className="font-bold text-sm text-[#0E0E10]">Executive PDF Reports</h4>
+                <p className="text-xs text-[#71717A] leading-relaxed">
+                  Presentation-ready A4 executive slide decks exportable with 1-click for board meetings and leadership briefings.
+                </p>
+              </div>
+            </div>
+
+            {/* Call to action button */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="nomu-pill w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Client Sign In to Access Workspace</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="nomu-pill w-full sm:w-auto px-6 py-3.5 rounded-full bg-[#FAF4ED] hover:bg-white text-[#0E0E10] border border-black/[0.06] text-xs sm:text-sm font-bold transition-all cursor-pointer"
+              >
+                1-Click Demo Profiles Available ✦
+              </button>
+            </div>
+          </section>
+
+          {/* Editorial Secondary Banner (Nomu Screenshot 3) */}
+          <section className="text-center space-y-6 py-8 border-t border-black/[0.06]">
+            <h3 className="text-3xl sm:text-5xl font-black text-[#0E0E10] tracking-tight leading-tight">
+              <span className="relative inline-block px-3 py-0.5">
+                <span className="relative z-10">Grow your margins,</span>
+                <span className="absolute inset-0 -skew-y-1 border-2 border-[#FF7448] rounded-full scale-105 pointer-events-none opacity-85" />
+              </span>
+              {" "}not your spreadsheets<span className="text-[#FF7448]">.</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-[#71717A] max-w-xl mx-auto leading-relaxed">
+              The first AI decision platform that replaces manual formula crunching, disparate BI dashboards, and slide drafting with explainable, 4-tier analytics.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="nomu-pill px-8 py-3.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                Launch Decision Suite <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+
+          {/* Auth Modal */}
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            onLogin={handleLogin}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
+  // 4. AUTHENTICATED CLIENT WORKSPACE (Only shown when user is logged in)
   return (
     <Layout 
       user={currentUser} 
@@ -279,26 +400,47 @@ export const App: React.FC = () => {
       historyCount={userLogs.length}
       onOpenAuth={() => setIsAuthModalOpen(true)}
     >
-      <div className="w-full space-y-12 animate-nomu-fade">
+      <div className="w-full space-y-10 animate-nomu-fade">
         {!rawData ? (
-          <div className="space-y-12">
-            {/* Nomu-Style Hero Section */}
-            <HeroLanding
-              onOpenAuth={() => setIsAuthModalOpen(true)}
-              onExploreDemo={() => {
-                document.getElementById('ingestion-hub')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              isAuthenticated={!!currentUser}
-            />
+          <div className="space-y-8">
+            {/* Authenticated Workspace Header */}
+            <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-black/[0.06] shadow-[0_12px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#FF7448] uppercase tracking-wider mb-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" /> Authorized Client Workspace
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#0E0E10] tracking-tight">
+                  Welcome back, {currentUser.name}
+                </h2>
+                <p className="text-xs text-[#71717A] mt-0.5">
+                  Connected as <span className="font-semibold text-[#0E0E10]">{currentUser.company}</span> ({currentUser.role})
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="nomu-pill px-5 py-2.5 rounded-full bg-[#FAF4ED] hover:bg-white text-xs font-bold text-[#0E0E10] border border-black/[0.04] flex items-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <Clock className="w-3.5 h-3.5 text-[#FF7448]" />
+                  <span>View Past Analyses</span>
+                  {userLogs.length > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-[#FF7448] text-white text-[9px] font-bold flex items-center justify-center">
+                      {userLogs.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
 
             {/* Ingestion Hub Centerpiece */}
-            <div id="ingestion-hub" className="scroll-mt-24 space-y-6 pt-4">
+            <div className="space-y-4">
               <div className="text-center space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-black text-[#0E0E10] tracking-tight">
-                  Connect or Pick a Sample Dataset
+                <h3 className="text-xl sm:text-2xl font-black text-[#0E0E10] tracking-tight">
+                  Connect or Pick a Dataset
                 </h3>
                 <p className="text-xs text-[#71717A]">
-                  Upload CSV, paste Google Sheet, connect database, or try one-click curated corporate samples.
+                  Select your ingestion source to begin the automated cleaning and narrative pipeline.
                 </p>
               </div>
 
@@ -310,30 +452,6 @@ export const App: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Editorial Secondary Banner (Nomu Screenshot 3) */}
-            <section className="mt-20 text-center space-y-6 py-12 border-t border-black/[0.06]">
-              <h3 className="text-3xl sm:text-5xl font-black text-[#0E0E10] tracking-tight leading-tight">
-                <span className="relative inline-block px-3 py-0.5">
-                  <span className="relative z-10">Grow your margins,</span>
-                  <span className="absolute inset-0 -skew-y-1 border-2 border-[#FF7448] rounded-full scale-105 pointer-events-none opacity-85" />
-                </span>
-                {" "}not your spreadsheets<span className="text-[#FF7448]">.</span>
-              </h3>
-              <p className="text-xs sm:text-sm text-[#71717A] max-w-xl mx-auto leading-relaxed">
-                The first AI decision platform that replaces the manual maze of spreadsheet formulas, disparate BI dashboards, and slide generation with explainable 4-tier analytics.
-              </p>
-              <div className="pt-2">
-                <button
-                  onClick={() => {
-                    document.getElementById('ingestion-hub')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="nomu-pill px-8 py-3.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2 cursor-pointer"
-                >
-                  Try Interactive Demo <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </section>
           </div>
         ) : (
           <section className="space-y-8">
@@ -483,13 +601,6 @@ export const App: React.FC = () => {
           onDeleteLog={handleDeleteLog}
           onClearAll={handleClearAllLogs}
           userName={currentUser?.name || 'Guest User'}
-        />
-
-        {/* Non-Blocking Auth Modal */}
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          onLogin={handleLogin}
         />
       </div>
     </Layout>

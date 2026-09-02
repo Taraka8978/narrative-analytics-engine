@@ -56,9 +56,9 @@ export const HeroLanding: React.FC<HeroLandingProps> = ({
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={onExploreDemo}
-          className="nomu-pill px-8 py-3.5 rounded-full bg-[#FF7448] hover:bg-[#F26235] text-white text-xs sm:text-sm font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer"
+          className="nomu-pill px-8 py-3.5 rounded-full bg-[#0E0E10] hover:bg-[#FF7448] text-white text-xs sm:text-sm font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer"
         >
-          <span>Ingest Data &amp; Test Engine</span>
+          <span>{isAuthenticated ? 'Open Data Hub' : 'Launch Client Workspace'}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 
